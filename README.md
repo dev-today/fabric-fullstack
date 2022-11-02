@@ -569,7 +569,7 @@ kubectl hlf chaincode query --config=org1.yaml \
 ngrok tcp 9999
 ```
 ```bash
-export CHAINCODE_ADDRESS=2.tcp.eu.ngrok.io:16747
+export CHAINCODE_ADDRESS=$(curl http://localhost:4040/api/tunnels | jq -r ".tunnels[0].public_url" | sed 's/.*tcp:\/\///')
 rm code.tar.gz chaincode.tgz
 export CHAINCODE_NAME=asset-dev
 export CHAINCODE_LABEL=asset
@@ -606,7 +606,7 @@ kubectl hlf chaincode install --path=./chaincode.tgz \
 ## Aprobar chaincode
 ```bash
 export CHAINCODE_NAME=asset-dev
-export SEQUENCE=7
+export SEQUENCE=9
 export VERSION="1.0"
 kubectl hlf chaincode approveformyorg --config=org1.yaml --user=admin --peer=org1-peer0.default \
     --package-id=$PACKAGE_ID \
@@ -625,7 +625,8 @@ kubectl hlf chaincode commit --config=org1.yaml --user=admin --mspid=Org1MSP \
 
 ```bash
 cd chaincodes/fabcar
-export CHAINCODE_ID=asset:7fe730a9764b39d394a8cd33cf7ede71540190ebe8c655c06f1b6dce4335d7ec
+export CHAINCODE_ID=$PACKAGE_ID
+echo "CHAINCODE_ID=$CHAINCODE_ID"
 export CHAINCODE_SERVER_ADDRESS=0.0.0.0:9999
 go run ./fabcar.go
 ```
@@ -654,20 +655,3 @@ Para añadir una nueva función al chaincode, se debe modificar el fichero `fabc
 go run ./fabcar.go
 ```
 
-
-TODO: añadir como preparar la cadena de conexion y los hosts que tienen que haber en el /etc/hosts.
-
-Crear peers y orderers con host alias para que pueda ver peers y orderers.
-
-- [x] Deploy CA in ARm
-- [x] Deploy Peer in ARM
-- [x] Deploy Orderer in ARM
-- [x] Install chaincode in ARM
-- [x] Approve chaincode in ARM
-- [x] Commit chaincode in ARM
-
-- [x] Create channel in ARM
-- [x] Modify channel in ARM
-- [x] Join channel in ARM
-
-- [x] Handle endpoints with main channel CRD

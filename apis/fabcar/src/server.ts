@@ -94,7 +94,12 @@ async function main() {
                 const carId = req.params.carId
                 const queryCarResponse = await contract.evaluateTransaction("CarHistory", carId)
                 const queryCarResponseString = Buffer.from(queryCarResponse).toString();
-                res.send(queryCarResponseString)
+                const cars = JSON.parse(queryCarResponseString)
+                const carsWithDate = cars.map(car => ({
+                    ...car,
+                    date: new Date(car.timestamp).toISOString()
+                }))
+                res.send(carsWithDate)
             } catch (e) {
                 res.send(e)
             }

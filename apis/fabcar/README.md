@@ -61,6 +61,20 @@ curl -v -X POST http://localhost:3000/cars \
 }'
 ```
 
+### Editar un coche
+
+```bash
+curl -v -X POST http://localhost:3000/cars \
+  -H 'Content-Type: application/json' \
+  -d '{
+   "carId": "FERRARI2022-1",
+   "make": "Ferrari",
+   "model": "F23",
+   "colour": "Red",
+   "owner": "Carlos Sainz"
+}'
+```
+
 
 ### Eliminar un coche
 
@@ -71,6 +85,6 @@ curl -v -X DELETE http://localhost:3000/cars/FERRARI2022-1
 ### Ver la historia un coche
 
 ```bash
-curl -v http://localhost:3000/cars/FERRARI2022-1/history
+curl -v http://localhost:3000/cars/FERRARI2022-1/history | jq
 ```
 
