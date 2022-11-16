@@ -7,7 +7,7 @@
 Para empezar a desplegar nuestra red Fabric tenemos que tener un cluster de Kubernetes. Para ello vamos a utilizar KinD.
 
 ```bash
-kind create cluster
+kind create cluster --config=kind.yaml
 ```
 
 ## Instalar operador de Kubernetes
@@ -22,7 +22,7 @@ Para instalar helm: [https://helm.sh/es/docs/intro/install/](https://helm.sh/es/
 ```bash
 helm repo add kfs https://kfsoftware.github.io/hlf-helm-charts --force-update
 
-helm install hlf-operator --version=1.8.0-beta9 --set image.tag=v1.8.0-beta13 kfs/hlf-operator
+helm install hlf-operator --version=1.8.0 --set image.tag=v1.8.0 kfs/hlf-operator
 ```
 
 ### Instalar plugin de Kubectl
@@ -173,7 +173,7 @@ EOF
 ```bash
 
 kubectl hlf ca create --storage-class=standard --capacity=1Gi --name=org1-ca \
-    --enroll-id=enroll --enroll-pw=enrollpw --image="kfsoftware/fabric-ca" --version="arm64-1.5.5.4" --db.type=postgres --db.datasource="dbname=fabric_ca host=192.168.1.26 port=5432 user=postgres password=postgres sslmode=disable" --hosts=org1-ca.localho.st --istio-port=443
+    --enroll-id=enroll --enroll-pw=enrollpw --image="kfsoftware/fabric-ca" --version="arm64-1.5.5.4" --db.type=postgres --db.datasource="dbname=fabric_ca2 host=192.168.1.26 port=5432 user=postgres password=postgres sslmode=disable" --hosts=org1-ca.localho.st --istio-port=443
 
 kubectl wait --timeout=180s --for=condition=Running fabriccas.hlf.kungfusoftware.es --all
 ```
@@ -211,7 +211,7 @@ kubectl wait --timeout=180s --for=condition=Running fabricpeers.hlf.kungfusoftwa
 Comprobar que el peer esta desplegado y funciona:
 
 ```bash
-curl -vik https://peer0-org1.localho.st:443
+openssl s_client -connect peer0-org1.localho.st:443
 ```
 
 ## Desplegar una organizacion `Orderer`
@@ -227,7 +227,7 @@ Para desplegar una organizacion `Orderer` tenemos que:
 ```bash
 
 kubectl hlf ca create --storage-class=standard --capacity=1Gi --name=ord-ca \
-    --enroll-id=enroll --enroll-pw=enrollpw --image="kfsoftware/fabric-ca" --version="arm64-1.5.5.4" --db.type=postgres --db.datasource="dbname=fabric_ca host=192.168.1.26 port=5432 user=postgres password=postgres sslmode=disable" --hosts=ord-ca.localho.st --istio-port=443
+    --enroll-id=enroll --enroll-pw=enrollpw --image="kfsoftware/fabric-ca" --version="arm64-1.5.5.4" --db.type=postgres --db.datasource="dbname=fabric_ca2 host=192.168.1.26 port=5432 user=postgres password=postgres sslmode=disable" --hosts=ord-ca.localho.st --istio-port=443
 
 kubectl wait --timeout=180s --for=condition=Running fabriccas.hlf.kungfusoftware.es --all
 
@@ -265,7 +265,7 @@ kubectl get pods
 ```
 
 ```bash
-curl -vik https://orderer0-ord.localho.st:443
+openssl s_client -connect orderer0-ord.localho.st:443
 ```
 
 ## Preparar cadena de conexion para interactuar con el orderer
@@ -333,7 +333,7 @@ kind: FabricMainChannel
 metadata:
   name: demo
 spec:
-  name: demo2
+  name: demo
   adminOrdererOrganizations:
     - mspID: OrdererMSP
   adminPeerOrganizations:
@@ -397,6 +397,7 @@ spec:
 ${ORDERER0_TLS_CERT}
 
 EOF
+
 ```
 
 ## Unir peer a canal
@@ -420,7 +421,7 @@ spec:
     secretName: wallet
     secretNamespace: default
   mspId: Org1MSP
-  name: demo2
+  name: demo
   orderers:
     - certificate: |
 ${ORDERER0_TLS_CERT}
@@ -430,6 +431,7 @@ ${ORDERER0_TLS_CERT}
       namespace: default
     - name: org1-peer1
       namespace: default
+  externalPeersToJoin: []
 EOF
 
 
@@ -537,14 +539,14 @@ export VERSION="1.0"
 kubectl hlf chaincode approveformyorg --config=org1.yaml --user=admin --peer=org1-peer0.default \
     --package-id=$PACKAGE_ID \
     --version "$VERSION" --sequence "$SEQUENCE" --name=asset \
-    --policy="OR('Org1MSP.member')" --channel=demo2
+    --policy="OR('Org1MSP.member')" --channel=demo
 ```
 
 ## Commit chaincode
 ```bash
 kubectl hlf chaincode commit --config=org1.yaml --user=admin --mspid=Org1MSP \
     --version "$VERSION" --sequence "$SEQUENCE" --name=asset \
-    --policy="OR('Org1MSP.member')" --channel=demo2
+    --policy="OR('Org1MSP.member')" --channel=demo
 ```
 
 
@@ -552,7 +554,7 @@ kubectl hlf chaincode commit --config=org1.yaml --user=admin --mspid=Org1MSP \
 ```bash
 kubectl hlf chaincode invoke --config=org1.yaml \
     --user=admin --peer=org1-peer0.default \
-    --chaincode=asset --channel=demo2 \
+    --chaincode=asset --channel=demo \
     --fcn=initLedger -a '[]'
 ```
 
@@ -560,7 +562,7 @@ kubectl hlf chaincode invoke --config=org1.yaml \
 ```bash
 kubectl hlf chaincode query --config=org1.yaml \
     --user=admin --peer=org1-peer0.default \
-    --chaincode=asset --channel=demo2 \
+    --chaincode=asset --channel=demo \
     --fcn=GetAllAssets -a '[]'
 ```
 
@@ -606,19 +608,19 @@ kubectl hlf chaincode install --path=./chaincode.tgz \
 ## Aprobar chaincode
 ```bash
 export CHAINCODE_NAME=asset-dev
-export SEQUENCE=9
+export SEQUENCE=11
 export VERSION="1.0"
 kubectl hlf chaincode approveformyorg --config=org1.yaml --user=admin --peer=org1-peer0.default \
     --package-id=$PACKAGE_ID \
     --version "$VERSION" --sequence "$SEQUENCE" --name="${CHAINCODE_NAME}" \
-    --policy="OR('Org1MSP.member')" --channel=demo2
+    --policy="OR('Org1MSP.member')" --channel=demo
 ```
 
 ## Commit chaincode
 ```bash
 kubectl hlf chaincode commit --config=org1.yaml --user=admin --mspid=Org1MSP \
     --version "$VERSION" --sequence "$SEQUENCE" --name="${CHAINCODE_NAME}" \
-    --policy="OR('Org1MSP.member')" --channel=demo2
+    --policy="OR('Org1MSP.member')" --channel=demo
 ```
 
 ## Lanzar el chaincode
@@ -636,7 +638,7 @@ go run ./fabcar.go
 ```bash
 kubectl hlf chaincode invoke --config=org1.yaml \
     --user=admin --peer=org1-peer0.default \
-    --chaincode=asset-dev --channel=demo2 \
+    --chaincode=asset-dev --channel=demo \
     --fcn=initLedger -a '[]'
 ```
 
@@ -644,7 +646,7 @@ kubectl hlf chaincode invoke --config=org1.yaml \
 ```bash
 kubectl hlf chaincode query --config=org1.yaml \
     --user=admin --peer=org1-peer0.default \
-    --chaincode=asset-dev --channel=demo2 \
+    --chaincode=asset-dev --channel=demo \
     --fcn=QueryAllCars -a '[]'
 ```
 

@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hlf-operator-tools
+  namespace: default
+  labels:
+    app: hlf-operator-tools
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hlf-operator-tools
+  template:
+    metadata:
+      labels:
+        app: hlf-operator-tools
+    spec:
+      containers:
+        - name: hlf-operator-tools
+          image: kfsoftware/hlf-operator-tools:latest
+          imagePullPolicy: Always
+          command:
+            - /bin/sh
+            - -c
+            - |
+              #!/bin/sh
+              set -e
+              echo "Starting hlf-operator-tools"
+              while true; do
+                sleep 3600
+              done
+          
