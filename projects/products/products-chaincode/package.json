@@ -1,0 +1,28 @@
+{
+  "name": "nft-chaincode",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "license": "MIT",
+  "dependencies": {
+    "fabric-contract-api": "^2.0.0",
+    "fabric-shim": "^2.0.0",
+    "tslog": "^3.3.4"
+  },
+  "devDependencies": {
+    "chai": "^4.1.2",
+    "chai-as-promised": "^7.1.1",
+    "eslint": "^4.19.1",
+    "mocha": "^8.0.1",
+    "nyc": "^14.1.1",
+    "sinon": "^6.0.0",
+    "sinon-chai": "^3.2.0",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^4.9.3"
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:w": "tsc --watch",
+    "chaincode:start": "fabric-chaincode-node server",
+    "start": "fabric-chaincode-node start"
+  }
+}
