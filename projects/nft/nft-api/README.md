@@ -23,6 +23,13 @@ npm run server:dev
 
 ## Operaciones
 
+### Verificar conectividad con el smart contract
+
+```bash
+http GET "http://localhost:3003/ping"
+```
+
+Debe devolver `pong`
 
 ### Inicializar el smart contract
 ```bash

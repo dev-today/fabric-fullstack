@@ -657,3 +657,34 @@ Para añadir una nueva función al chaincode, se debe modificar el fichero `fabc
 go run ./fabcar.go
 ```
 
+
+
+## Desplegar hlf-operator-ui
+
+### Desplegar interfaz web
+```bash
+export HOST=operator-ui.localho.st
+export API_URL="http://operator-api.localho.st/graphql"
+kubectl hlf operatorui create --name=operator-ui --namespace=default --hosts=$HOST --ingress-class-name=istio --api-url=$API_URL
+```
+
+
+### Crear secreto
+```bash
+kubectl delete secret hlf-cp --namespace=default
+kubectl create secret generic hlf-cp --namespace=default \
+        --from-file=org1.yaml=$PWD/org1.yaml
+```
+
+### Desplegar api
+
+```bash
+export API_URL=operator-api.localho.st
+export HLF_SECRET_NAME="hlf-cp"
+export HLF_MSPID="Org1MSP"
+export HLF_SECRET_KEY="org1.yaml" # e.g. networkConfig.yaml
+export HLF_USER="admin"
+kubectl hlf operatorapi create --name=operator-api --namespace=default --hosts=$API_HOST --ingress-class-name=istio \
+          --hlf-mspid="${HLF_MSPID}" --hlf-secret="${HLF_SECRET_NAME}" --hlf-secret-key="${HLF_SECRET_KEY}" \
+          --hlf-user="${HLF_USER}"
+```
