@@ -3,10 +3,11 @@
 
 ## Instalación del chaincode en los peers
 
-
+Levantar el tunel
 ```bash
-ngrok tcp 9999
+ngrok tcp 9999 --region=eu
 ```
+
 ```bash
 export CHAINCODE_ADDRESS=$(curl http://localhost:4040/api/tunnels | jq -r ".tunnels[0].public_url" | sed 's/.*tcp:\/\///')
 rm code.tar.gz chaincode.tgz
@@ -69,6 +70,15 @@ export CORE_CHAINCODE_ID=$PACKAGE_ID
 export CORE_PEER_TLS_ENABLED=false
 
 npm run chaincode:start
+```
+
+### Ping chaincode
+```bash
+export CP_FILE=$PWD/../../../org1.yaml
+kubectl hlf chaincode query --config=$CP_FILE \
+    --user=admin --peer=org1-peer0.default \
+    --chaincode=nft-dev --channel=demo \
+    --fcn=ping
 ```
 
 ### Ejecutar chaincode
