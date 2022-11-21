@@ -173,7 +173,8 @@ EOF
 ```bash
 
 kubectl hlf ca create --storage-class=standard --capacity=1Gi --name=org1-ca \
-    --enroll-id=enroll --enroll-pw=enrollpw --image="kfsoftware/fabric-ca" --version="arm64-1.5.5.4" --db.type=postgres --db.datasource="dbname=fabric_ca2 host=192.168.1.26 port=5432 user=postgres password=postgres sslmode=disable" --hosts=org1-ca.localho.st --istio-port=443
+    --enroll-id=enroll --enroll-pw=enrollpw --hosts=org1-ca.localho.st --istio-port=443
+
 
 kubectl wait --timeout=180s --for=condition=Running fabriccas.hlf.kungfusoftware.es --all
 ```
@@ -227,7 +228,7 @@ Para desplegar una organizacion `Orderer` tenemos que:
 ```bash
 
 kubectl hlf ca create --storage-class=standard --capacity=1Gi --name=ord-ca \
-    --enroll-id=enroll --enroll-pw=enrollpw --image="kfsoftware/fabric-ca" --version="arm64-1.5.5.4" --db.type=postgres --db.datasource="dbname=fabric_ca2 host=192.168.1.26 port=5432 user=postgres password=postgres sslmode=disable" --hosts=ord-ca.localho.st --istio-port=443
+    --enroll-id=enroll --enroll-pw=enrollpw --hosts=ord-ca.localho.st --istio-port=443
 
 kubectl wait --timeout=180s --for=condition=Running fabriccas.hlf.kungfusoftware.es --all
 
