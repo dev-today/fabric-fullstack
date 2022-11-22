@@ -29,8 +29,6 @@ helm repo add kfs https://kfsoftware.github.io/hlf-helm-charts --force-update
 helm install hlf-operator --version=1.8.0 --set image.tag=v1.8.0 kfs/hlf-operator
 ```
 
-
-
 ### Instalar plugin de Kubectl
 
 Para instalar el plugin de kubectl, hay que instalar primero Krew:
@@ -45,6 +43,7 @@ kubectl krew install hlf
 ### Instalar Istio
 
 Instalar binarios de Istio en la maquina:
+
 ```bash
 curl -L https://istio.io/downloadIstio | sh -
 ```
@@ -121,7 +120,6 @@ EOF
 
 ```
 
-
 ### Configurar DNS interno
 
 ```bash
@@ -168,8 +166,6 @@ EOF
 kubectl create ns nft
 ```
 
-
-
 ### Variables de entorno para AMD (predeterminado)
 
 ```bash
@@ -180,7 +176,6 @@ export ORDERER_IMAGE=hyperledger/fabric-orderer
 export ORDERER_VERSION=2.4.6
 
 ```
-
 
 ### Variables de entorno para ARM (Mac M1)
 
@@ -238,10 +233,6 @@ Comprobar que el peer esta desplegado y funciona:
 openssl s_client -connect nft-peer0-org1.localho.st:443
 ```
 
-
-
-
-
 ## Desplegar Org2MSP
 
 ### Desplegar una autoridad de certificacion
@@ -286,8 +277,6 @@ Comprobar que el peer esta desplegado y funciona:
 ```bash
 openssl s_client -connect nft-peer0-org2.localho.st:443
 ```
-
-
 
 ## Desplegar una organizacion `Orderer`
 
@@ -343,8 +332,6 @@ kubectl get pods --namespace=nft
 openssl s_client -connect nft-orderer0-ord.localho.st:443
 ```
 
-
-
 ## Preparar cadena de conexion para interactuar con el orderer
 
 Para preparar la cadena de conexion, tenemos que:
@@ -383,15 +370,27 @@ kubectl hlf utils adduser --userPath=admin-ordservice.yaml --config=ordservice.y
 
 ### Crear el secreto
 
-
 ```bash
+
+kubectl hlf ca register  --name=ord-ca --namespace=nft --user=admin --secret=adminpw \
+    --type=admin --enroll-id enroll --enroll-secret=enrollpw --mspid=OrdererMSP
+
+
 kubectl hlf ca enroll --name=ord-ca --namespace=nft \
     --user=admin --secret=adminpw --mspid OrdererMSP \
     --ca-name tlsca  --output orderermsp.yaml
 
+
+kubectl hlf ca register  --name=org1-ca --namespace=nft --user=admin --secret=adminpw \
+    --type=admin --enroll-id enroll --enroll-secret=enrollpw --mspid=Org2MSP
+
+
 kubectl hlf ca enroll --name=org1-ca --namespace=nft \
     --user=admin --secret=adminpw --mspid Org1MSP \
     --ca-name ca  --output org1msp.yaml
+
+kubectl hlf ca register  --name=org2-ca --namespace=nft --user=admin --secret=adminpw \
+    --type=admin --enroll-id enroll --enroll-secret=enrollpw --mspid=Org2MSP
 
 kubectl hlf ca enroll --name=org2-ca --namespace=nft \
     --user=admin --secret=adminpw --mspid Org2MSP \
@@ -532,9 +531,6 @@ EOF
 
 ```
 
-
-
-
 ## Unir peers de Org2MSP peer a canal
 
 ```bash
@@ -569,6 +565,3 @@ EOF
 
 
 ```
-
-
-

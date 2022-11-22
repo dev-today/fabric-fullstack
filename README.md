@@ -310,6 +310,10 @@ kubectl hlf ca enroll --name=ord-ca --namespace=default \
     --user=admin --secret=adminpw --mspid OrdererMSP \
     --ca-name tlsca  --output orderermsp.yaml
 
+
+kubectl hlf ca register  --name=org1-ca --namespace=default --user=admin --secret=adminpw \
+    --type=admin --enroll-id enroll --enroll-secret=enrollpw --mspid=Org1MSP
+
 kubectl hlf ca enroll --name=org1-ca --namespace=default \
     --user=admin --secret=adminpw --mspid Org1MSP \
     --ca-name ca  --output org1msp.yaml

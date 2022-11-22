@@ -200,7 +200,7 @@ export ORDERER_VERSION=2.4.6
 ```bash
 
 kubectl hlf ca create --storage-class=standard --capacity=1Gi --name=marketplace-ca --namespace=marketplace \
-    --enroll-id=enroll --enroll-pw=enrollpw  --hosts=marketplace-ca.localho.st --istio-port=443
+    --enroll-id=enroll --enroll-pw=enrollpw --hosts=marketplace-ca.localho.st --istio-port=443
 
 
 kubectl wait --timeout=180s --namespace=marketplace --for=condition=Running fabriccas.hlf.kungfusoftware.es --all
@@ -249,10 +249,11 @@ openssl s_client -connect peer0-marketplace.localho.st:443
 ```bash
 
 kubectl hlf ca create --storage-class=standard --capacity=1Gi --name=sony-ca --namespace=marketplace \
-    --enroll-id=enroll --enroll-pw=enrollpw  --hosts=sony-ca.localho.st --istio-port=443
+    --enroll-id=enroll --enroll-pw=enrollpw --hosts=sony-ca.localho.st --istio-port=443
 
 
 kubectl wait --timeout=180s --namespace=marketplace --for=condition=Running fabriccas.hlf.kungfusoftware.es --all
+
 ```
 
 Comprobar que la autoridad de certificacion esta desplegada y funciona:
@@ -302,7 +303,7 @@ Para desplegar una organizacion `Orderer` tenemos que:
 ```bash
 
 kubectl hlf ca create --storage-class=standard --capacity=1Gi --name=ord-ca --namespace=marketplace \
-    --enroll-id=enroll --enroll-pw=enrollpw  --hosts=marketplace-ord-ca.localho.st --istio-port=443
+    --enroll-id=enroll --enroll-pw=enrollpw --hosts=marketplace-ord-ca.localho.st --istio-port=443
 
 kubectl wait --timeout=180s --for=condition=Running fabriccas.hlf.kungfusoftware.es --namespace=marketplace --all
 
@@ -381,17 +382,30 @@ kubectl hlf ca enroll --name=ord-ca --namespace=marketplace --user=admin --secre
 kubectl hlf utils adduser --userPath=admin-ordservice.yaml --config=ordservice.yaml --username=admin --mspid=OrdererMSP
 ```
 
-### Crear el secreto
+### Crear el secreto wallet
 
 
 ```bash
+
+kubectl hlf ca register  --name=ord-ca --namespace=marketplace --user=admin --secret=adminpw \
+    --type=admin --enroll-id enroll --enroll-secret=enrollpw --mspid=OrdererMSP
+
+
 kubectl hlf ca enroll --name=ord-ca --namespace=marketplace \
     --user=admin --secret=adminpw --mspid OrdererMSP \
     --ca-name tlsca  --output orderermsp.yaml
 
+kubectl hlf ca register --name=marketplace-ca --namespace=marketplace --user=admin --secret=adminpw \
+    --type=admin --enroll-id enroll --enroll-secret=enrollpw --mspid=MarketplaceMSP
+
+
 kubectl hlf ca enroll --name=marketplace-ca --namespace=marketplace \
     --user=admin --secret=adminpw --mspid MarketplaceMSP \
     --ca-name ca  --output marketplacemsp.yaml
+
+
+kubectl hlf ca register --name=sony-ca --namespace=marketplace --user=admin --secret=adminpw \
+    --type=admin --enroll-id enroll --enroll-secret=enrollpw --mspid=SonyMSP
 
 kubectl hlf ca enroll --name=sony-ca --namespace=marketplace \
     --user=admin --secret=adminpw --mspid SonyMSP \
