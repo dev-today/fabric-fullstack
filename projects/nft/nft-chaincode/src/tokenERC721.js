@@ -11,7 +11,6 @@ const symbolKey = "symbol";
 const tslog = require("tslog");
 const log = new tslog.Logger({});
 class TokenERC721Contract extends Contract {
-
   async ping(ctx) {
     log.info("ping");
     return "pong";
@@ -88,10 +87,9 @@ class TokenERC721Contract extends Contract {
     const owner = nft.owner;
     const tokenApproval = nft.approved;
     const operatorApproval = await this.IsApprovedForAll(ctx, owner, sender);
+    log.info(owner, sender);
     if (owner !== sender && tokenApproval !== sender && !operatorApproval) {
-      throw new Error(
-        "El remitente no puede transferir el token no fungible"
-      );
+      throw new Error("El remitente no puede transferir el token no fungible");
     }
 
     // Comprobar si `from` es el propietario actual
@@ -313,14 +311,13 @@ class TokenERC721Contract extends Contract {
 
   // ============== Extensión de enumeración ERC721 ===============
 
-
   /**
    * GetTokens devuelve tokens no fungibles rastreados por este contrato.
    *
    * @param {Context} ctx el contexto de transacción
    * @returns {Number} Devuelve todos los tokens no fungibles válidos rastreados por este contrato.
    */
-   async GetTokens(ctx) {
+  async GetTokens(ctx) {
     // verifique que las opciones de contrato ya estén configuradas primero para ejecutar la función
     await this.CheckInitialized(ctx);
 
@@ -332,10 +329,10 @@ class TokenERC721Contract extends Contract {
     );
 
     // Contar el número de claves compuestas devueltas
-    const items = []
+    const items = [];
     let result = await iterator.next();
     while (!result.done) {
-      const value = JSON.parse(result.value.value.toString('utf8'));
+      const value = JSON.parse(result.value.value.toString("utf8"));
       items.push(value);
       result = await iterator.next();
     }
@@ -417,9 +414,9 @@ class TokenERC721Contract extends Contract {
     if (clientMSPID !== "Org1MSP") {
       throw new Error("El cliente no está autorizado a crear nuevos tokens");
     }
-
     // Obtener ID de la identidad del cliente que envía
     const minter = ctx.clientIdentity.getID();
+    log.info(minter, "MINTER");
 
     // Comprobar si el token a acuñar no existe
     const exists = await this._nftExists(ctx, tokenId);
@@ -459,6 +456,19 @@ class TokenERC721Contract extends Contract {
 
     return nft;
   }
+  async limpiarChaincode(ctx) {
+    const iterator = await ctx.stub.getStateByPartialCompositeKey(
+      nftPrefix,
+      []
+    );
+
+    let result = await iterator.next();
+    while (!result.done) {
+      await ctx.stub.deleteState(result.value.key);
+      result = await iterator.next();
+    }
+    return "OK"
+  }
 
   /**
    * Quemar un token no fungible
@@ -476,7 +486,9 @@ class TokenERC721Contract extends Contract {
     // Comprobar si una persona que llama es el propietario del token no fungible
     const nft = await this._readNFT(ctx, tokenId);
     if (nft.owner !== owner) {
-      throw new Error(`Token no fungible ${tokenId} no es propiedad de ${owner}`);
+      throw new Error(
+        `Token no fungible ${tokenId} no es propiedad de ${owner}`
+      );
     }
 
     // Eliminar el token

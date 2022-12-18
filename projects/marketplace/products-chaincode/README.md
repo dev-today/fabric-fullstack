@@ -5,7 +5,7 @@
 
 
 ```bash
-ngrok tcp 9998
+ngrok tcp 9998 --region=eu
 ```
 ```bash
 export CHAINCODE_ADDRESS=$(curl http://localhost:4040/api/tunnels | jq -r ".tunnels[0].public_url" | sed 's/.*tcp:\/\///')
@@ -31,12 +31,12 @@ tar cfz code.tar.gz connection.json
 tar cfz chaincode.tgz metadata.json code.tar.gz
 export PACKAGE_ID=$(kubectl hlf chaincode calculatepackageid --path=chaincode.tgz --language=golang --label=$CHAINCODE_LABEL)
 echo "PACKAGE_ID=$PACKAGE_ID"
-export CP_FILE=$PWD/../../../org1.yaml
+export CP_FILE=$PWD/../../../marketplace.yaml
 kubectl hlf chaincode install --path=./chaincode.tgz \
-    --config=$CP_FILE --language=golang --label=$CHAINCODE_LABEL --user=admin --peer=org1-peer0.default
+    --config=$CP_FILE --language=golang --label=$CHAINCODE_LABEL --user=admin --peer=marketplace-peer0.marketplace
 
 kubectl hlf chaincode install --path=./chaincode.tgz \
-    --config=$CP_FILE --language=golang --label=$CHAINCODE_LABEL --user=admin --peer=org1-peer1.default
+    --config=$CP_FILE --language=golang --label=$CHAINCODE_LABEL --user=admin --peer=sony-peer0.marketplace
 
 ```
 
@@ -46,10 +46,15 @@ kubectl hlf chaincode install --path=./chaincode.tgz \
 export CHAINCODE_NAME=product-dev
 export SEQUENCE=1
 export VERSION="1.0"
-kubectl hlf chaincode approveformyorg --config=${CP_FILE} --user=admin --peer=org1-peer0.default \
+kubectl hlf chaincode approveformyorg --config="${CP_FILE}" --user=admin --peer=marketplace-peer0.marketplace \
     --package-id=$PACKAGE_ID \
     --version "$VERSION" --sequence "$SEQUENCE" --name="${CHAINCODE_NAME}" \
-    --policy="OR('Org1MSP.member')" --channel=demo
+    --policy="OR('MarketplaceMSP.member')" --channel=demo2
+
+kubectl hlf chaincode approveformyorg --config="${CP_FILE}" --user=admin --peer=sony-peer0.marketplace \
+    --package-id=$PACKAGE_ID \
+    --version "$VERSION" --sequence "$SEQUENCE" --name="${CHAINCODE_NAME}" \
+    --policy="OR('MarketplaceMSP.member', 'SonyMSP.member')" --channel=demo2
 ```
 
 ## Commit chaincode
@@ -73,7 +78,7 @@ npm run chaincode:start
 
 ### Ejecutar chaincode
 ```bash
-export CP_FILE=$PWD/../../../org1.yaml
+export CP_FILE=$PWD/../../../marketplace.yaml
 kubectl hlf chaincode query --config=$CP_FILE \
     --user=admin --peer=org1-peer0.default \
     --chaincode=product-dev --channel=demo \

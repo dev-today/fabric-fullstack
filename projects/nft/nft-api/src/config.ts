@@ -1,4 +1,5 @@
 export interface Config {
+    caName: string;
     channelName: string;
     chaincodeName: string;
     mspID: string;
@@ -7,6 +8,7 @@ export interface Config {
 }
 
 export const config: Config = {
+    caName: process.env.CA_NAME,
     channelName: process.env.CHANNEL_NAME,
     chaincodeName: process.env.CHAINCODE_NAME,
     mspID: process.env.MSP_ID,

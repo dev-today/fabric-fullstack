@@ -179,6 +179,8 @@ export PEER_VERSION=2.4.6
 export ORDERER_IMAGE=hyperledger/fabric-orderer
 export ORDERER_VERSION=2.4.6
 
+export CA_IMAGE=hyperledger/fabric-ca
+export CA_VERSION=1.5.6-beta2
 ```
 
 
@@ -191,6 +193,9 @@ export PEER_VERSION=2.4.6
 export ORDERER_IMAGE=bswamina/fabric-orderer
 export ORDERER_VERSION=2.4.6
 
+export CA_IMAGE=hyperledger/fabric-ca
+export CA_VERSION=1.5.6-beta2
+
 ```
 
 ## Desplegar MarketplaceMSP
@@ -199,7 +204,7 @@ export ORDERER_VERSION=2.4.6
 
 ```bash
 
-kubectl hlf ca create --storage-class=standard --capacity=1Gi --name=marketplace-ca --namespace=marketplace \
+kubectl hlf ca create --image="kfsoftware/fabric-ca" --version="arm64-1.5.5.4" --db.type=postgres --db.datasource="dbname=fabric_ca2 host=192.168.1.26 port=5432 user=postgres password=postgres sslmode=disable"  --storage-class=standard --capacity=1Gi --name=marketplace-ca --namespace=marketplace \
     --enroll-id=enroll --enroll-pw=enrollpw --hosts=marketplace-ca.localho.st --istio-port=443
 
 
@@ -248,7 +253,7 @@ openssl s_client -connect peer0-marketplace.localho.st:443
 
 ```bash
 
-kubectl hlf ca create --storage-class=standard --capacity=1Gi --name=sony-ca --namespace=marketplace \
+kubectl hlf ca create  --image="kfsoftware/fabric-ca" --version="arm64-1.5.5.4" --db.type=postgres --db.datasource="dbname=fabric_ca2 host=192.168.1.26 port=5432 user=postgres password=postgres sslmode=disable"  --storage-class=standard --capacity=1Gi --name=sony-ca --namespace=marketplace \
     --enroll-id=enroll --enroll-pw=enrollpw --hosts=sony-ca.localho.st --istio-port=443
 
 
@@ -302,7 +307,7 @@ Para desplegar una organizacion `Orderer` tenemos que:
 
 ```bash
 
-kubectl hlf ca create --storage-class=standard --capacity=1Gi --name=ord-ca --namespace=marketplace \
+kubectl hlf ca create  --image="kfsoftware/fabric-ca" --version="arm64-1.5.5.4" --db.type=postgres --db.datasource="dbname=fabric_ca2 host=192.168.1.26 port=5432 user=postgres password=postgres sslmode=disable"  --storage-class=standard --capacity=1Gi --name=ord-ca --namespace=marketplace \
     --enroll-id=enroll --enroll-pw=enrollpw --hosts=marketplace-ord-ca.localho.st --istio-port=443
 
 kubectl wait --timeout=180s --for=condition=Running fabriccas.hlf.kungfusoftware.es --namespace=marketplace --all
@@ -337,7 +342,7 @@ kubectl wait --timeout=180s --for=condition=Running fabricorderernodes.hlf.kungf
 Comprobar que el orderer esta ejecutandose:
 
 ```bash
-kubectl get pods
+kubectl get pods --namespace=marketplace
 ```
 
 ```bash
@@ -420,11 +425,6 @@ kubectl create secret generic wallet --namespace=marketplace \
 Crear el canal
 
 ```bash
-export PEER_MARKETPLACE_SIGN_CERT=$(kubectl get fabriccas marketplace-ca --namespace=marketplace -o=jsonpath='{.status.ca_cert}')
-export PEER_MARKETPLACE_TLS_CERT=$(kubectl get fabriccas marketplace-ca --namespace=marketplace -o=jsonpath='{.status.tlsca_cert}')
-
-export PEER_SONY_SIGN_CERT=$(kubectl get fabriccas sony-ca --namespace=marketplace -o=jsonpath='{.status.ca_cert}')
-export PEER_SONY_TLS_CERT=$(kubectl get fabriccas sony-ca --namespace=marketplace -o=jsonpath='{.status.tlsca_cert}')
 
 export IDENT_8=$(printf "%8s" "")
 export ORDERER_TLS_CERT=$(kubectl get fabriccas ord-ca --namespace=marketplace -o=jsonpath='{.status.tlsca_cert}' | sed -e "s/^/${IDENT_8}/" )
@@ -437,7 +437,7 @@ metadata:
   name: demo-marketplace
   namespace: marketplace
 spec:
-  name: demo
+  name: demo2
   adminOrdererOrganizations:
     - mspID: OrdererMSP
   adminPeerOrganizations:
@@ -499,16 +499,26 @@ spec:
           port: 7053
       mspID: OrdererMSP
       ordererEndpoints:
-        - ord-node1.marketplace:7050
+        - marketplace-orderer0-ord.localho.st:443
       orderersToJoin: []
   orderers:
-    - host: ord-node1.marketplace
-      port: 7050
+    - host: marketplace-orderer0-ord.localho.st
+      port: 443
       tlsCert: |-
 ${ORDERER0_TLS_CERT}
 
 EOF
 
+```
+Comprobar que el canal se ha creado correctamente:
+```bash
+kubectl get fabricmainchannels
+```
+
+Algo asi tiene que salir, con el estado en `RUNNING`:
+```text
+NAME               STATE     AGE
+demo-marketplace   RUNNING   82s
 ```
 
 ## Unir peers de MarketplaceMSP peer a canal
@@ -525,14 +535,14 @@ metadata:
   name: demo-marketplacemsp
 spec:
   anchorPeers:
-    - host: marketplace-peer0.marketplace
-      port: 7051
+    - host: peer0-marketplace.localho.st
+      port: 443
   hlfIdentity:
     secretKey: marketplacemsp.yaml
     secretName: wallet
     secretNamespace: marketplace
   mspId: MarketplaceMSP
-  name: demo
+  name: demo2
   orderers:
     - certificate: |
 ${ORDERER0_TLS_CERT}
@@ -546,8 +556,16 @@ EOF
 
 ```
 
+Comprobar que la organizacion se ha adherido correctamente:
+```bash
+kubectl get fabricfollowerchannel     
+```
 
-
+Algo asi tiene que salir, con el estado en `RUNNING`:
+```text
+NAME                  STATE     AGE
+demo-marketplacemsp   RUNNING   3m1s
+```
 
 ## Unir peers de SonyMSP peer a canal
 
@@ -563,14 +581,14 @@ metadata:
   name: demo-sonymsp
 spec:
   anchorPeers:
-    - host: sony-peer0.marketplace
-      port: 7051
+    - host: peer0-sony.localho.st
+      port: 443
   hlfIdentity:
     secretKey: sonymsp.yaml
     secretName: wallet
     secretNamespace: marketplace
   mspId: SonyMSP
-  name: demo
+  name: demo2
   orderers:
     - certificate: |
 ${ORDERER0_TLS_CERT}
@@ -584,5 +602,69 @@ EOF
 
 ```
 
+Comprobar que la organizacion se ha adherido correctamente:
+```bash
+kubectl get fabricfollowerchannel     
+```
+
+Algo asi tiene que salir, con el estado en `RUNNING`:
+```text
+NAME                  STATE     AGE
+demo-marketplacemsp   RUNNING   3m38s
+demo-sonymsp          RUNNING   9s
+```
+
+
+
+## Preparar cadena de conexion para un peer
+
+Para preparar la cadena de conexion, tenemos que:
+
+1. Obtener la cadena de conexion sin usuarios para la organizacion MarketplaceMSP y OrdererMSP
+2. Registrar un usuario en la autoridad de certificacion para firma (register)
+3. Obtener los certificados utilizando el usuario creado anteriormente (enroll)
+4. Adjuntar el usuario a la cadena de conexion
+
+1. Obtener la cadena de conexion sin usuarios para la organizacion MarketplaceMSP y OrdererMSP
+
+```bash
+kubectl hlf inspect --output marketplace.yaml --namespace=marketplace
+```
+
+2. Registrar un usuario en la autoridad de certificacion para firma
+```bash
+kubectl hlf ca register --name=marketplace-ca --namespace=marketplace --user=admin --secret=adminpw --type=admin \
+ --enroll-id enroll --enroll-secret=enrollpw --mspid MarketplaceMSP  
+```
+
+3. Obtener los certificados utilizando el usuario creado anteriormente
+```bash
+kubectl hlf ca enroll --name=marketplace-ca --namespace=marketplace --user=admin --secret=adminpw --mspid MarketplaceMSP \
+        --ca-name ca  --output peer-marketplace.yaml
+```
+
+4. Adjuntar el usuario a la cadena de conexion
+```bash
+kubectl hlf utils adduser --userPath=peer-marketplace.yaml --config=marketplace.yaml --username=admin --mspid=MarketplaceMSP
+```
+
+
+
+5. Registrar un usuario en la autoridad de certificacion para firma
+```bash
+kubectl hlf ca register --name=sony-ca --namespace=marketplace --user=admin --secret=adminpw --type=admin \
+ --enroll-id enroll --enroll-secret=enrollpw --mspid SonyMSP  
+```
+
+6. Obtener los certificados utilizando el usuario creado anteriormente
+```bash
+kubectl hlf ca enroll --name=sony-ca --namespace=marketplace --user=admin --secret=adminpw --mspid SonyMSP \
+        --ca-name ca  --output peer-sony.yaml
+```
+
+4. Adjuntar el usuario a la cadena de conexion
+```bash
+kubectl hlf utils adduser --userPath=peer-sony.yaml --config=marketplace.yaml --username=admin --mspid=SonyMSP
+```
 
 

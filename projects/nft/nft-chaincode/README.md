@@ -32,12 +32,12 @@ tar cfz code.tar.gz connection.json
 tar cfz chaincode.tgz metadata.json code.tar.gz
 export PACKAGE_ID=$(kubectl hlf chaincode calculatepackageid --path=chaincode.tgz --language=golang --label=$CHAINCODE_LABEL)
 echo "PACKAGE_ID=$PACKAGE_ID"
-export CP_FILE=$PWD/../../../org1.yaml
+export CP_FILE=$PWD/nft.yaml
 kubectl hlf chaincode install --path=./chaincode.tgz \
     --config=$CP_FILE --language=golang --label=$CHAINCODE_LABEL --user=admin --peer=org1-peer0.default
 
 kubectl hlf chaincode install --path=./chaincode.tgz \
-    --config=$CP_FILE --language=golang --label=$CHAINCODE_LABEL --user=admin --peer=org1-peer1.default
+    --config=$CP_FILE --language=golang --label=$CHAINCODE_LABEL --user=admin --peer=org2-peer0.default
 
 ```
 
@@ -47,20 +47,24 @@ kubectl hlf chaincode install --path=./chaincode.tgz \
 export CHAINCODE_NAME=nft-dev
 export SEQUENCE=1
 export VERSION="1.0"
+kubectl hlf chaincode approveformyorg --config=${CP_FILE} --user=admin --peer=org2-peer0.default \
+    --package-id=$PACKAGE_ID \
+    --version "$VERSION" --sequence "$SEQUENCE" --name="${CHAINCODE_NAME}" \
+    --policy="OR('Org1MSP.member', 'Org2MSP.member')" --channel=demo
+
 kubectl hlf chaincode approveformyorg --config=${CP_FILE} --user=admin --peer=org1-peer0.default \
     --package-id=$PACKAGE_ID \
     --version "$VERSION" --sequence "$SEQUENCE" --name="${CHAINCODE_NAME}" \
-    --policy="OR('Org1MSP.member')" --channel=demo
+    --policy="OR('Org1MSP.member', 'Org2MSP.member')" --channel=demo
+
 ```
 
 ## Commit chaincode
 ```bash
 kubectl hlf chaincode commit --config=${CP_FILE} --user=admin --mspid=Org1MSP \
     --version "$VERSION" --sequence "$SEQUENCE" --name="${CHAINCODE_NAME}" \
-    --policy="OR('Org1MSP.member')" --channel=demo
+    --policy="OR('Org1MSP.member', 'Org2MSP.member')" --channel=demo
 ```
-
-
 
 
 ## Empezar chaincode
@@ -74,7 +78,7 @@ npm run chaincode:start
 
 ### Ping chaincode
 ```bash
-export CP_FILE=$PWD/../../../org1.yaml
+export CP_FILE=$PWD/../../../nft.yaml
 kubectl hlf chaincode query --config=$CP_FILE \
     --user=admin --peer=org1-peer0.default \
     --chaincode=nft-dev --channel=demo \
@@ -83,7 +87,7 @@ kubectl hlf chaincode query --config=$CP_FILE \
 
 ### Ejecutar chaincode
 ```bash
-export CP_FILE=$PWD/../../../org1.yaml
+export CP_FILE=$PWD/../../../nft.yaml
 kubectl hlf chaincode query --config=$CP_FILE \
     --user=admin --peer=org1-peer0.default \
     --chaincode=nft-dev --channel=demo \

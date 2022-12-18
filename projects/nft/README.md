@@ -158,6 +158,7 @@ data:
         loadbalance
     }
 EOF
+
 ```
 
 ## Crear namespace en Kubernetes
@@ -175,6 +176,8 @@ export PEER_VERSION=2.4.6
 export ORDERER_IMAGE=hyperledger/fabric-orderer
 export ORDERER_VERSION=2.4.6
 
+export CA_IMAGE=hyperledger/fabric-ca
+export CA_VERSION=1.5.6-beta2
 ```
 
 ### Variables de entorno para ARM (Mac M1)
@@ -186,6 +189,9 @@ export PEER_VERSION=2.4.6
 export ORDERER_IMAGE=bswamina/fabric-orderer
 export ORDERER_VERSION=2.4.6
 
+export CA_IMAGE=hyperledger/fabric-ca
+export CA_VERSION=1.5.6-beta2
+
 ```
 
 ## Desplegar Org1MSP
@@ -194,11 +200,11 @@ export ORDERER_VERSION=2.4.6
 
 ```bash
 
-kubectl hlf ca create --storage-class=standard --capacity=1Gi --name=org1-ca --namespace=nft \
+kubectl hlf ca create --image=$CA_IMAGE --version=$CA_VERSION --storage-class=standard --capacity=1Gi --name=org1-ca --namespace=default \
     --enroll-id=enroll --enroll-pw=enrollpw --hosts=nft-org1-ca.localho.st --istio-port=443
 
 
-kubectl wait --timeout=180s --namespace=nft --for=condition=Running fabriccas.hlf.kungfusoftware.es --all
+kubectl wait --timeout=180s --namespace=default --for=condition=Running fabriccas.hlf.kungfusoftware.es --all
 ```
 
 Comprobar que la autoridad de certificacion esta desplegada y funciona:
@@ -211,7 +217,7 @@ Registrar un usuario en la autoridad certificacion de la organizacion peer (Org1
 
 ```bash
 # registrar usuario en la CA para los peers
-kubectl hlf ca register --name=org1-ca --namespace=nft --user=peer --secret=peerpw --type=peer \
+kubectl hlf ca register --name=org1-ca --namespace=default --user=peer --secret=peerpw --type=peer \
  --enroll-id enroll --enroll-secret=enrollpw --mspid Org1MSP
 
 ```
@@ -220,11 +226,11 @@ kubectl hlf ca register --name=org1-ca --namespace=nft --user=peer --secret=peer
 
 ```bash
 kubectl hlf peer create --statedb=couchdb --image=$PEER_IMAGE --version=$PEER_VERSION --storage-class=standard --enroll-id=peer --mspid=Org1MSP \
-        --enroll-pw=peerpw --capacity=5Gi --name=org1-peer0 --namespace=nft --ca-name=org1-ca.nft \
+        --enroll-pw=peerpw --capacity=5Gi --name=org1-peer0 --namespace=default --ca-name=org1-ca.default \
         --hosts=nft-peer0-org1.localho.st --istio-port=443
 
 
-kubectl wait --timeout=180s --for=condition=Running --namespace=nft fabricpeers.hlf.kungfusoftware.es --all
+kubectl wait --timeout=180s --for=condition=Running --namespace=default fabricpeers.hlf.kungfusoftware.es --all
 ```
 
 Comprobar que el peer esta desplegado y funciona:
@@ -239,11 +245,11 @@ openssl s_client -connect nft-peer0-org1.localho.st:443
 
 ```bash
 
-kubectl hlf ca create --storage-class=standard --capacity=1Gi --name=org2-ca --namespace=nft \
+kubectl hlf ca create  --image=$CA_IMAGE --version=$CA_VERSION --storage-class=standard --capacity=1Gi --name=org2-ca --namespace=default \
     --enroll-id=enroll --enroll-pw=enrollpw --hosts=nft-org2-ca.localho.st --istio-port=443
 
 
-kubectl wait --timeout=180s --namespace=nft --for=condition=Running fabriccas.hlf.kungfusoftware.es --all
+kubectl wait --timeout=180s --namespace=default --for=condition=Running fabriccas.hlf.kungfusoftware.es --all
 ```
 
 Comprobar que la autoridad de certificacion esta desplegada y funciona:
@@ -256,7 +262,7 @@ Registrar un usuario en la autoridad certificacion de la organizacion peer (Org2
 
 ```bash
 # registrar usuario en la CA para los peers
-kubectl hlf ca register --name=org2-ca --namespace=nft --user=peer --secret=peerpw --type=peer \
+kubectl hlf ca register --name=org2-ca --namespace=default --user=peer --secret=peerpw --type=peer \
  --enroll-id enroll --enroll-secret=enrollpw --mspid Org2MSP
 
 ```
@@ -265,11 +271,11 @@ kubectl hlf ca register --name=org2-ca --namespace=nft --user=peer --secret=peer
 
 ```bash
 kubectl hlf peer create --statedb=couchdb --image=$PEER_IMAGE --version=$PEER_VERSION --storage-class=standard --enroll-id=peer --mspid=Org2MSP \
-        --enroll-pw=peerpw --capacity=5Gi --name=org2-peer0 --namespace=nft --ca-name=org2-ca.nft \
+        --enroll-pw=peerpw --capacity=5Gi --name=org2-peer0 --namespace=default --ca-name=org2-ca.default \
         --hosts=nft-peer0-org2.localho.st --istio-port=443
 
 
-kubectl wait --timeout=180s --for=condition=Running --namespace=nft fabricpeers.hlf.kungfusoftware.es --all
+kubectl wait --timeout=180s --for=condition=Running --namespace=default fabricpeers.hlf.kungfusoftware.es --all
 ```
 
 Comprobar que el peer esta desplegado y funciona:
@@ -290,10 +296,10 @@ Para desplegar una organizacion `Orderer` tenemos que:
 
 ```bash
 
-kubectl hlf ca create --storage-class=standard --capacity=1Gi --name=ord-ca --namespace=nft \
+kubectl hlf ca create  --image=$CA_IMAGE --version=$CA_VERSION --storage-class=standard --capacity=1Gi --name=ord-ca --namespace=default \
     --enroll-id=enroll --enroll-pw=enrollpw --hosts=nft-ord-ca.localho.st --istio-port=443
 
-kubectl wait --timeout=180s --for=condition=Running fabriccas.hlf.kungfusoftware.es --namespace=nft --all
+kubectl wait --timeout=180s --for=condition=Running fabriccas.hlf.kungfusoftware.es --namespace=default --all
 
 ```
 
@@ -306,7 +312,7 @@ curl -vik https://nft-ord-ca.localho.st:443/cainfo
 ### Registrar el usuario `orderer`
 
 ```bash
-kubectl hlf ca register --name=ord-ca --namespace=nft --user=orderer --secret=ordererpw \
+kubectl hlf ca register --name=ord-ca --namespace=default --user=orderer --secret=ordererpw \
     --type=orderer --enroll-id enroll --enroll-secret=enrollpw --mspid=OrdererMSP --ca-url="https://nft-ord-ca.localho.st:443"
 
 ```
@@ -316,16 +322,16 @@ kubectl hlf ca register --name=ord-ca --namespace=nft --user=orderer --secret=or
 ```bash
 kubectl hlf ordnode create --image=$ORDERER_IMAGE --version=$ORDERER_VERSION \
     --storage-class=standard --enroll-id=orderer --mspid=OrdererMSP \
-    --enroll-pw=ordererpw --capacity=2Gi --name=ord-node1 --namespace=nft --ca-name=ord-ca.nft \
+    --enroll-pw=ordererpw --capacity=2Gi --name=ord-node1 --namespace=default --ca-name=ord-ca.default \
     --hosts=nft-orderer0-ord.localho.st --istio-port=443
 
-kubectl wait --timeout=180s --for=condition=Running fabricorderernodes.hlf.kungfusoftware.es --namespace=nft --all
+kubectl wait --timeout=180s --for=condition=Running fabricorderernodes.hlf.kungfusoftware.es --namespace=default --all
 ```
 
 Comprobar que el orderer esta ejecutandose:
 
 ```bash
-kubectl get pods --namespace=nft
+kubectl get pods --namespace=default
 ```
 
 ```bash
@@ -344,13 +350,13 @@ Para preparar la cadena de conexion, tenemos que:
 1. Obtener la cadena de conexion sin usuarios
 
 ```bash
-kubectl hlf inspect --output ordservice.yaml -o OrdererMSP --namespace=nft
+kubectl hlf inspect --output ordservice.yaml -o OrdererMSP --namespace=default
 ```
 
 2. Registrar un usuario en la autoridad de certificacion TLS
 
 ```bash
-kubectl hlf ca register --name=ord-ca --namespace=nft --user=admin --secret=adminpw \
+kubectl hlf ca register --name=ord-ca --namespace=default --user=admin --secret=adminpw \
     --type=admin --enroll-id enroll --enroll-secret=enrollpw --mspid=OrdererMSP
 
 ```
@@ -358,7 +364,7 @@ kubectl hlf ca register --name=ord-ca --namespace=nft --user=admin --secret=admi
 3. Obtener los certificados utilizando el certificado
 
 ```bash
-kubectl hlf ca enroll --name=ord-ca --namespace=nft --user=admin --secret=adminpw --mspid OrdererMSP \
+kubectl hlf ca enroll --name=ord-ca --namespace=default --user=admin --secret=adminpw --mspid OrdererMSP \
         --ca-name ca  --output admin-ordservice.yaml
 ```
 
@@ -372,31 +378,31 @@ kubectl hlf utils adduser --userPath=admin-ordservice.yaml --config=ordservice.y
 
 ```bash
 
-kubectl hlf ca register  --name=ord-ca --namespace=nft --user=admin --secret=adminpw \
+kubectl hlf ca register  --name=ord-ca --namespace=default --user=admin --secret=adminpw \
     --type=admin --enroll-id enroll --enroll-secret=enrollpw --mspid=OrdererMSP
 
 
-kubectl hlf ca enroll --name=ord-ca --namespace=nft \
+kubectl hlf ca enroll --name=ord-ca --namespace=default \
     --user=admin --secret=adminpw --mspid OrdererMSP \
     --ca-name tlsca  --output orderermsp.yaml
 
 
-kubectl hlf ca register  --name=org1-ca --namespace=nft --user=admin --secret=adminpw \
-    --type=admin --enroll-id enroll --enroll-secret=enrollpw --mspid=Org2MSP
+kubectl hlf ca register  --name=org1-ca --namespace=default --user=admin --secret=adminpw \
+    --type=admin --enroll-id enroll --enroll-secret=enrollpw --mspid=Org1MSP
 
 
-kubectl hlf ca enroll --name=org1-ca --namespace=nft \
+kubectl hlf ca enroll --name=org1-ca --namespace=default \
     --user=admin --secret=adminpw --mspid Org1MSP \
     --ca-name ca  --output org1msp.yaml
 
-kubectl hlf ca register  --name=org2-ca --namespace=nft --user=admin --secret=adminpw \
+kubectl hlf ca register  --name=org2-ca --namespace=default --user=admin --secret=adminpw \
     --type=admin --enroll-id enroll --enroll-secret=enrollpw --mspid=Org2MSP
 
-kubectl hlf ca enroll --name=org2-ca --namespace=nft \
+kubectl hlf ca enroll --name=org2-ca --namespace=default \
     --user=admin --secret=adminpw --mspid Org2MSP \
     --ca-name ca  --output org2msp.yaml
 
-kubectl create secret generic wallet --namespace=nft \
+kubectl create secret generic wallet --namespace=default \
         --from-file=org1msp.yaml=$PWD/org1msp.yaml \
         --from-file=org2msp.yaml=$PWD/org2msp.yaml \
         --from-file=orderermsp.yaml=$PWD/orderermsp.yaml
@@ -405,22 +411,22 @@ kubectl create secret generic wallet --namespace=nft \
 Crear el canal
 
 ```bash
-export PEER_ORG1_SIGN_CERT=$(kubectl get fabriccas org1-ca --namespace=nft -o=jsonpath='{.status.ca_cert}')
-export PEER_ORG1_TLS_CERT=$(kubectl get fabriccas org1-ca --namespace=nft -o=jsonpath='{.status.tlsca_cert}')
+export PEER_ORG1_SIGN_CERT=$(kubectl get fabriccas org1-ca --namespace=default -o=jsonpath='{.status.ca_cert}')
+export PEER_ORG1_TLS_CERT=$(kubectl get fabriccas org1-ca --namespace=default -o=jsonpath='{.status.tlsca_cert}')
 
-export PEER_SONY_SIGN_CERT=$(kubectl get fabriccas org2-ca --namespace=nft -o=jsonpath='{.status.ca_cert}')
-export PEER_SONY_TLS_CERT=$(kubectl get fabriccas org2-ca --namespace=nft -o=jsonpath='{.status.tlsca_cert}')
+export PEER_SONY_SIGN_CERT=$(kubectl get fabriccas org2-ca --namespace=default -o=jsonpath='{.status.ca_cert}')
+export PEER_SONY_TLS_CERT=$(kubectl get fabriccas org2-ca --namespace=default -o=jsonpath='{.status.tlsca_cert}')
 
 export IDENT_8=$(printf "%8s" "")
-export ORDERER_TLS_CERT=$(kubectl get fabriccas ord-ca --namespace=nft -o=jsonpath='{.status.tlsca_cert}' | sed -e "s/^/${IDENT_8}/" )
-export ORDERER0_TLS_CERT=$(kubectl get fabricorderernodes ord-node1 --namespace=nft -o=jsonpath='{.status.tlsCert}' | sed -e "s/^/${IDENT_8}/" )
+export ORDERER_TLS_CERT=$(kubectl get fabriccas ord-ca --namespace=default -o=jsonpath='{.status.tlsca_cert}' | sed -e "s/^/${IDENT_8}/" )
+export ORDERER0_TLS_CERT=$(kubectl get fabricorderernodes ord-node1 --namespace=default -o=jsonpath='{.status.tlsCert}' | sed -e "s/^/${IDENT_8}/" )
 
 kubectl apply -f - <<EOF
 apiVersion: hlf.kungfusoftware.es/v1alpha1
 kind: FabricMainChannel
 metadata:
   name: demo-nft
-  namespace: nft
+  namespace: default
 spec:
   name: demo
   adminOrdererOrganizations:
@@ -458,36 +464,36 @@ spec:
   peerOrganizations:
     - mspID: Org1MSP
       caName: "org1-ca"
-      caNamespace: "nft"
+      caNamespace: "default"
     - mspID: Org2MSP
       caName: "org2-ca"
-      caNamespace: "nft"
+      caNamespace: "default"
   identities:
     OrdererMSP:
       secretKey: orderermsp.yaml
       secretName: wallet
-      secretNamespace: nft
+      secretNamespace: default
     Org1MSP:
       secretKey: org1msp.yaml
       secretName: wallet
-      secretNamespace: nft
+      secretNamespace: default
     Org2MSP:
       secretKey: org2msp.yaml
       secretName: wallet
-      secretNamespace: nft
+      secretNamespace: default
   externalPeerOrganizations: []
   ordererOrganizations:
     - caName: "ord-ca"
-      caNamespace: "nft"
+      caNamespace: "default"
       externalOrderersToJoin:
-        - host: ord-node1.nft
+        - host: ord-node1.default
           port: 7053
       mspID: OrdererMSP
       ordererEndpoints:
-        - ord-node1.nft:7050
+        - ord-node1.default:7050
       orderersToJoin: []
   orderers:
-    - host: ord-node1.nft
+    - host: ord-node1.default
       port: 7050
       tlsCert: |-
 ${ORDERER0_TLS_CERT}
@@ -501,7 +507,7 @@ EOF
 ```bash
 
 export IDENT_8=$(printf "%8s" "")
-export ORDERER0_TLS_CERT=$(kubectl get fabricorderernodes ord-node1 --namespace=nft -o=jsonpath='{.status.tlsCert}' | sed -e "s/^/${IDENT_8}/" )
+export ORDERER0_TLS_CERT=$(kubectl get fabricorderernodes ord-node1 --namespace=default -o=jsonpath='{.status.tlsCert}' | sed -e "s/^/${IDENT_8}/" )
 
 kubectl apply -f - <<EOF
 apiVersion: hlf.kungfusoftware.es/v1alpha1
@@ -510,21 +516,21 @@ metadata:
   name: demo-org1msp
 spec:
   anchorPeers:
-    - host: org1-peer0.nft
+    - host: org1-peer0.default
       port: 7051
   hlfIdentity:
     secretKey: org1msp.yaml
     secretName: wallet
-    secretNamespace: nft
+    secretNamespace: default
   mspId: Org1MSP
   name: demo
   orderers:
     - certificate: |
 ${ORDERER0_TLS_CERT}
-      url: grpcs://ord-node1.nft:7050
+      url: grpcs://ord-node1.default:7050
   peersToJoin:
     - name: org1-peer0
-      namespace: nft
+      namespace: default
   externalPeersToJoin: []
 EOF
 
@@ -536,7 +542,7 @@ EOF
 ```bash
 
 export IDENT_8=$(printf "%8s" "")
-export ORDERER0_TLS_CERT=$(kubectl get fabricorderernodes ord-node1 --namespace=nft -o=jsonpath='{.status.tlsCert}' | sed -e "s/^/${IDENT_8}/" )
+export ORDERER0_TLS_CERT=$(kubectl get fabricorderernodes ord-node1 --namespace=default -o=jsonpath='{.status.tlsCert}' | sed -e "s/^/${IDENT_8}/" )
 
 kubectl apply -f - <<EOF
 apiVersion: hlf.kungfusoftware.es/v1alpha1
@@ -545,23 +551,75 @@ metadata:
   name: demo-org2msp
 spec:
   anchorPeers:
-    - host: org2-peer0.nft
+    - host: org2-peer0.default
       port: 7051
   hlfIdentity:
     secretKey: org2msp.yaml
     secretName: wallet
-    secretNamespace: nft
+    secretNamespace: default
   mspId: Org2MSP
   name: demo
   orderers:
     - certificate: |
 ${ORDERER0_TLS_CERT}
-      url: grpcs://ord-node1.nft:7050
+      url: grpcs://ord-node1.default:7050
   peersToJoin:
     - name: org2-peer0
-      namespace: nft
+      namespace: default
   externalPeersToJoin: []
 EOF
 
 
+```
+
+
+## Preparar cadena de conexion para un peer
+
+Para preparar la cadena de conexion, tenemos que:
+
+1. Obtener la cadena de conexion sin usuarios para la organizacion MarketplaceMSP y OrdererMSP
+2. Registrar un usuario en la autoridad de certificacion para firma (register)
+3. Obtener los certificados utilizando el usuario creado anteriormente (enroll)
+4. Adjuntar el usuario a la cadena de conexion
+
+1. Obtener la cadena de conexion sin usuarios para la organizacion MarketplaceMSP y OrdererMSP
+
+```bash
+kubectl hlf inspect --output nft.yaml --namespace=default
+```
+
+2. Registrar un usuario en la autoridad de certificacion para firma
+```bash
+kubectl hlf ca register --name=org1-ca --namespace=default --user=admin --secret=adminpw --type=admin \
+ --enroll-id enroll --enroll-secret=enrollpw --mspid Org1MSP  
+```
+
+3. Obtener los certificados utilizando el usuario creado anteriormente
+```bash
+kubectl hlf ca enroll --name=org1-ca --namespace=default --user=admin --secret=adminpw --mspid Org1MSP \
+        --ca-name ca  --output peer-org1.yaml
+```
+
+4. Adjuntar el usuario a la cadena de conexion
+```bash
+kubectl hlf utils adduser --userPath=peer-org1.yaml --config=nft.yaml --username=admin --mspid=Org1MSP
+```
+
+
+
+5. Registrar un usuario en la autoridad de certificacion para firma
+```bash
+kubectl hlf ca register --name=org2-ca --namespace=default --user=admin --secret=adminpw --type=admin \
+ --enroll-id enroll --enroll-secret=enrollpw --mspid Org2MSP  
+```
+
+6. Obtener los certificados utilizando el usuario creado anteriormente
+```bash
+kubectl hlf ca enroll --name=org2-ca --namespace=default --user=admin --secret=adminpw --mspid Org2MSP \
+        --ca-name ca  --output peer-org2.yaml
+```
+
+4. Adjuntar el usuario a la cadena de conexion
+```bash
+kubectl hlf utils adduser --userPath=peer-org2.yaml --config=nft.yaml --username=admin --mspid=Org2MSP
 ```

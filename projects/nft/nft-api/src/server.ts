@@ -75,7 +75,14 @@ async function main() {
             break;
         }
     }
-    const caURL = "https://org1-ca.localho.st:443";
+    const ca = networkConfig.certificateAuthorities[config.caName]
+    if (!ca) {
+        throw new Error(`Certificate authority ${config.caName} not found in network configuration`);
+    }
+    const caURL = ca.url;
+    if (!caURL) {
+        throw new Error(`Certificate authority ${config.caName} does not have a URL`);
+    }
 
     const fabricCAServices = new FabricCAServices(caURL, {
         trustedRoots: [],
@@ -88,7 +95,7 @@ async function main() {
         enrollmentSecret: "enrollpw"
     });
 
-    const registrar = User.createUser("enroll", "enrollpw", "Org1MSP", registrarUserResponse.certificate, registrarUserResponse.key.toBytes());
+    const registrar = User.createUser("enroll", "enrollpw", config.mspID, registrarUserResponse.certificate, registrarUserResponse.key.toBytes());
 
 
     const adminUser = _.get(networkConfig, `organizations.${config.mspID}.users.${config.hlfUser}`)
@@ -300,7 +307,7 @@ async function main() {
             if (!tokenId || !tokenUri) {
                 throw new Error("Missing tokenId or tokenUri")
             }
-            const fcn = "MintWithTokenURI"
+            const fcn = "Mint"
             const responseBuffer = await (req as any).contract.submitTransaction(fcn, tokenId, tokenUri);
             const responseString = Buffer.from(responseBuffer).toString();
             res.send(responseString);

@@ -11,8 +11,9 @@ Declarar las variables en el .env
 CHANNEL_NAME=demo
 CHAINCODE_NAME=nft-dev
 MSP_ID=Org1MSP
+CA_NAME=org1-ca.default
 HLF_USER=admin
-NETWORK_CONFIG_PATH=../../../org1.yaml
+NETWORK_CONFIG_PATH=../../../nft.yaml
 ```
 
 Lanzar el servidor
@@ -49,13 +50,13 @@ http POST "http://localhost:3003/login" username="user1" password="user1pw"
 
 ### Crear un NFT
 ```bash
-http POST "http://localhost:3003/submit" "x-user=user1" fcn=Mint "args[]=8"  \
+http POST "http://localhost:3003/submit" x-user:user1 fcn=Mint "args[]=8"  \
         "args[]=https://storage.googleapis.com/opensea-prod.appspot.com/puffs/3.png" "args[]=Nombre" "args[]=Descripcion"
 ```
 
 ### Obtener un NFT
 ```bash
-http POST "http://localhost:3003/evaluate" "x-user=user1" fcn=GetToken "args[]=8"
+http POST "http://localhost:3003/evaluate" x-user:user1 fcn=GetToken "args[]=8"
 ```
 
 
@@ -74,8 +75,8 @@ http POST "http://localhost:3003/login" username="user2" password="user2pw"
 
 ## Mintear un NFT
 ```bash
-http POST "http://localhost:3003/submit" x-user:user2 fcn=MintWithTokenURI "args[]=6" "args[]=TokenURI"
-
+http POST "http://localhost:3003/submit" x-user:user2 fcn=Mint "args[]=9"  \
+        "args[]=https://storage.googleapis.com/opensea-prod.appspot.com/puffs/3.png" "args[]=Nombre2" "args[]=Descripcion2"
 ```
 
 ## Obtener identidad del usuario 1
@@ -85,12 +86,17 @@ http GET "http://localhost:3003/id" x-user:user1
 
 ## Transferir token de usuario 2 a usuario 1
 ```bash
-http POST "http://localhost:3003/submit" x-user:user2 fcn=TransferFrom "args[]=x509::/OU=client/CN=user2::/C=ES/L=Alicante/=Alicante/O=Kung Fu Software/OU=Tech/CN=ca" "args[]=x509::/OU=client/CN=user1::/C=ES/L=Alicante/=Alicante/O=Kung Fu Software/OU=Tech/CN=ca" "args[]=6"
+http POST "http://localhost:3003/submit" x-user:user2 fcn=TransferFrom "args[]=x509::/OU=client/CN=user2::/C=ES/L=Alicante/=Alicante/O=Kung Fu Software/OU=Tech/CN=ca" "args[]=x509::/OU=client/CN=user1::/C=ES/L=Alicante/=Alicante/O=Kung Fu Software/OU=Tech/CN=ca" "args[]=9"
 
 ```
 
 
 ## Comprobar owner del token transferido
 ```bash
-http POST "http://localhost:3003/evaluate" x-user:user2 fcn=OwnerOf "args[]=6"
+http POST "http://localhost:3003/evaluate" x-user:user2 fcn=OwnerOf "args[]=9"
+```
+
+## Limpiar chaincode
+```bash
+http POST "http://localhost:3003/submit" x-user:user2 fcn=limpiarChaincode
 ```
