@@ -204,7 +204,7 @@ export CA_VERSION=1.5.6-beta2
 
 ```bash
 
-kubectl hlf ca create --image="kfsoftware/fabric-ca" --version="arm64-1.5.5.4" --db.type=postgres --db.datasource="dbname=fabric_ca2 host=192.168.1.26 port=5432 user=postgres password=postgres sslmode=disable"  --storage-class=standard --capacity=1Gi --name=marketplace-ca --namespace=marketplace \
+kubectl hlf ca create  --image=$CA_IMAGE --version=$CA_VERSION   --storage-class=standard --capacity=1Gi --name=marketplace-ca --namespace=marketplace \
     --enroll-id=enroll --enroll-pw=enrollpw --hosts=marketplace-ca.localho.st --istio-port=443
 
 
@@ -253,7 +253,7 @@ openssl s_client -connect peer0-marketplace.localho.st:443
 
 ```bash
 
-kubectl hlf ca create  --image="kfsoftware/fabric-ca" --version="arm64-1.5.5.4" --db.type=postgres --db.datasource="dbname=fabric_ca2 host=192.168.1.26 port=5432 user=postgres password=postgres sslmode=disable"  --storage-class=standard --capacity=1Gi --name=sony-ca --namespace=marketplace \
+kubectl hlf ca create   --image=$CA_IMAGE --version=$CA_VERSION   --storage-class=standard --capacity=1Gi --name=sony-ca --namespace=marketplace \
     --enroll-id=enroll --enroll-pw=enrollpw --hosts=sony-ca.localho.st --istio-port=443
 
 
@@ -307,7 +307,7 @@ Para desplegar una organizacion `Orderer` tenemos que:
 
 ```bash
 
-kubectl hlf ca create  --image="kfsoftware/fabric-ca" --version="arm64-1.5.5.4" --db.type=postgres --db.datasource="dbname=fabric_ca2 host=192.168.1.26 port=5432 user=postgres password=postgres sslmode=disable"  --storage-class=standard --capacity=1Gi --name=ord-ca --namespace=marketplace \
+kubectl hlf ca create   --image=$CA_IMAGE --version=$CA_VERSION   --storage-class=standard --capacity=1Gi --name=ord-ca --namespace=marketplace \
     --enroll-id=enroll --enroll-pw=enrollpw --hosts=marketplace-ord-ca.localho.st --istio-port=443
 
 kubectl wait --timeout=180s --for=condition=Running fabriccas.hlf.kungfusoftware.es --namespace=marketplace --all
@@ -333,8 +333,8 @@ kubectl hlf ca register --name=ord-ca --namespace=marketplace --user=orderer --s
 ```bash
 kubectl hlf ordnode create --image=$ORDERER_IMAGE --version=$ORDERER_VERSION \
     --storage-class=standard --enroll-id=orderer --mspid=OrdererMSP \
-    --enroll-pw=ordererpw --capacity=2Gi --name=ord-node1 --namespace=marketplace --ca-name=ord-ca.marketplace \
-    --hosts=marketplace-orderer0-ord.localho.st --istio-port=443
+    --enroll-pw=ordererpw --capacity=2Gi --name=ord-node2 --namespace=marketplace --ca-name=ord-ca.marketplace \
+    --hosts=marketplace-orderer2-ord.localho.st --istio-port=443
 
 kubectl wait --timeout=180s --for=condition=Running fabricorderernodes.hlf.kungfusoftware.es --namespace=marketplace --all
 ```
@@ -346,45 +346,7 @@ kubectl get pods --namespace=marketplace
 ```
 
 ```bash
-openssl s_client -connect marketplace-orderer0-ord.localho.st:443
-```
-
-
-
-## Preparar cadena de conexion para interactuar con el orderer
-
-Para preparar la cadena de conexion, tenemos que:
-
-- Obtener la cadena de conexion sin usuarios
-- Registrar un usuario en la autoridad de certificacion para firma
-- Obtener los certificados utilizando el usuario creado anteriormente
-- Adjuntar el usuario a la cadena de conexion
-
-1. Obtener la cadena de conexion sin usuarios
-
-```bash
-kubectl hlf inspect --output ordservice.yaml -o OrdererMSP --namespace=marketplace
-```
-
-2. Registrar un usuario en la autoridad de certificacion TLS
-
-```bash
-kubectl hlf ca register --name=ord-ca --namespace=marketplace --user=admin --secret=adminpw \
-    --type=admin --enroll-id enroll --enroll-secret=enrollpw --mspid=OrdererMSP
-
-```
-
-3. Obtener los certificados utilizando el certificado
-
-```bash
-kubectl hlf ca enroll --name=ord-ca --namespace=marketplace --user=admin --secret=adminpw --mspid OrdererMSP \
-        --ca-name ca  --output admin-ordservice.yaml
-```
-
-4. Adjuntar el usuario a la cadena de conexion
-
-```
-kubectl hlf utils adduser --userPath=admin-ordservice.yaml --config=ordservice.yaml --username=admin --mspid=OrdererMSP
+openssl s_client -connect marketplace-orderer2-ord.localho.st:443
 ```
 
 ### Crear el secreto wallet
@@ -428,16 +390,16 @@ Crear el canal
 
 export IDENT_8=$(printf "%8s" "")
 export ORDERER_TLS_CERT=$(kubectl get fabriccas ord-ca --namespace=marketplace -o=jsonpath='{.status.tlsca_cert}' | sed -e "s/^/${IDENT_8}/" )
-export ORDERER0_TLS_CERT=$(kubectl get fabricorderernodes ord-node1 --namespace=marketplace -o=jsonpath='{.status.tlsCert}' | sed -e "s/^/${IDENT_8}/" )
+export ORDERER0_TLS_CERT=$(kubectl get fabricorderernodes ord-node2 --namespace=marketplace -o=jsonpath='{.status.tlsCert}' | sed -e "s/^/${IDENT_8}/" )
 
 kubectl apply -f - <<EOF
 apiVersion: hlf.kungfusoftware.es/v1alpha1
 kind: FabricMainChannel
 metadata:
-  name: demo-marketplace
+  name: demo3-marketplace
   namespace: marketplace
 spec:
-  name: demo2
+  name: demo3
   adminOrdererOrganizations:
     - mspID: OrdererMSP
   adminPeerOrganizations:
@@ -495,14 +457,14 @@ spec:
     - caName: "ord-ca"
       caNamespace: "marketplace"
       externalOrderersToJoin:
-        - host: ord-node1.marketplace
+        - host: ord-node2.marketplace
           port: 7053
       mspID: OrdererMSP
       ordererEndpoints:
-        - marketplace-orderer0-ord.localho.st:443
+        - marketplace-orderer2-ord.localho.st:443
       orderersToJoin: []
   orderers:
-    - host: marketplace-orderer0-ord.localho.st
+    - host: marketplace-orderer2-ord.localho.st
       port: 443
       tlsCert: |-
 ${ORDERER0_TLS_CERT}
@@ -526,13 +488,13 @@ demo-marketplace   RUNNING   82s
 ```bash
 
 export IDENT_8=$(printf "%8s" "")
-export ORDERER0_TLS_CERT=$(kubectl get fabricorderernodes ord-node1 --namespace=marketplace -o=jsonpath='{.status.tlsCert}' | sed -e "s/^/${IDENT_8}/" )
+export ORDERER0_TLS_CERT=$(kubectl get fabricorderernodes ord-node2 --namespace=marketplace -o=jsonpath='{.status.tlsCert}' | sed -e "s/^/${IDENT_8}/" )
 
 kubectl apply -f - <<EOF
 apiVersion: hlf.kungfusoftware.es/v1alpha1
 kind: FabricFollowerChannel
 metadata:
-  name: demo-marketplacemsp
+  name: demo3-marketplacemsp
 spec:
   anchorPeers:
     - host: peer0-marketplace.localho.st
@@ -542,11 +504,11 @@ spec:
     secretName: wallet
     secretNamespace: marketplace
   mspId: MarketplaceMSP
-  name: demo2
+  name: demo3
   orderers:
     - certificate: |
 ${ORDERER0_TLS_CERT}
-      url: grpcs://ord-node1.marketplace:7050
+      url: grpcs://ord-node2.marketplace:7050
   peersToJoin:
     - name: marketplace-peer0
       namespace: marketplace
@@ -572,13 +534,13 @@ demo-marketplacemsp   RUNNING   3m1s
 ```bash
 
 export IDENT_8=$(printf "%8s" "")
-export ORDERER0_TLS_CERT=$(kubectl get fabricorderernodes ord-node1 --namespace=marketplace -o=jsonpath='{.status.tlsCert}' | sed -e "s/^/${IDENT_8}/" )
+export ORDERER0_TLS_CERT=$(kubectl get fabricorderernodes ord-node2 --namespace=marketplace -o=jsonpath='{.status.tlsCert}' | sed -e "s/^/${IDENT_8}/" )
 
 kubectl apply -f - <<EOF
 apiVersion: hlf.kungfusoftware.es/v1alpha1
 kind: FabricFollowerChannel
 metadata:
-  name: demo-sonymsp
+  name: demo3-sonymsp
 spec:
   anchorPeers:
     - host: peer0-sony.localho.st
@@ -588,11 +550,11 @@ spec:
     secretName: wallet
     secretNamespace: marketplace
   mspId: SonyMSP
-  name: demo2
+  name: demo3
   orderers:
     - certificate: |
 ${ORDERER0_TLS_CERT}
-      url: grpcs://ord-node1.marketplace:7050
+      url: grpcs://ord-node2.marketplace:7050
   peersToJoin:
     - name: sony-peer0
       namespace: marketplace

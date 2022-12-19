@@ -49,19 +49,19 @@ export VERSION="1.0"
 kubectl hlf chaincode approveformyorg --config="${CP_FILE}" --user=admin --peer=marketplace-peer0.marketplace \
     --package-id=$PACKAGE_ID \
     --version "$VERSION" --sequence "$SEQUENCE" --name="${CHAINCODE_NAME}" \
-    --policy="OR('MarketplaceMSP.member')" --channel=demo2
+    --policy="OR('MarketplaceMSP.member')" --channel=demo3
 
 kubectl hlf chaincode approveformyorg --config="${CP_FILE}" --user=admin --peer=sony-peer0.marketplace \
     --package-id=$PACKAGE_ID \
     --version "$VERSION" --sequence "$SEQUENCE" --name="${CHAINCODE_NAME}" \
-    --policy="OR('MarketplaceMSP.member', 'SonyMSP.member')" --channel=demo2
+    --policy="OR('MarketplaceMSP.member', 'SonyMSP.member')" --channel=demo3
 ```
 
 ## Commit chaincode
 ```bash
 kubectl hlf chaincode commit --config=${CP_FILE} --user=admin --mspid=Org1MSP \
     --version "$VERSION" --sequence "$SEQUENCE" --name="${CHAINCODE_NAME}" \
-    --policy="OR('Org1MSP.member')" --channel=demo
+    --policy="OR('Org1MSP.member')" --channel=demo3
 ```
 
 

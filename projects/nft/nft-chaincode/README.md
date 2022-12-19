@@ -32,7 +32,7 @@ tar cfz code.tar.gz connection.json
 tar cfz chaincode.tgz metadata.json code.tar.gz
 export PACKAGE_ID=$(kubectl hlf chaincode calculatepackageid --path=chaincode.tgz --language=golang --label=$CHAINCODE_LABEL)
 echo "PACKAGE_ID=$PACKAGE_ID"
-export CP_FILE=$PWD/nft.yaml
+export CP_FILE=$PWD/../../../nft.yaml
 kubectl hlf chaincode install --path=./chaincode.tgz \
     --config=$CP_FILE --language=golang --label=$CHAINCODE_LABEL --user=admin --peer=org1-peer0.default
 

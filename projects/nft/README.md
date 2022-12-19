@@ -313,7 +313,7 @@ curl -vik https://nft-ord-ca.localho.st:443/cainfo
 
 ```bash
 kubectl hlf ca register --name=ord-ca --namespace=default --user=orderer --secret=ordererpw \
-    --type=orderer --enroll-id enroll --enroll-secret=enrollpw --mspid=OrdererMSP --ca-url="https://nft-ord-ca.localho.st:443"
+    --type=orderer --enroll-id enroll --enroll-secret=enrollpw --mspid=OrdererMSP 
 
 ```
 
