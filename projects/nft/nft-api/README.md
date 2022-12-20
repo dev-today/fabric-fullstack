@@ -2,17 +2,39 @@
 
 Este API expone via HTTP las operaciones que se pueden realizar sobre el chaincode NFT.
 
-## Lanzar el servidor
+## Lanzar el servidor para Org1
 
 Declarar las variables en el .env
 
 ```bash
-CHANNEL_NAME=demo
-CHAINCODE_NAME=nft-dev
-MSP_ID=Org1MSP
-CA_NAME=org1-ca.default
-HLF_USER=admin
-NETWORK_CONFIG_PATH=../../../nft.yaml
+export CHANNEL_NAME=demo
+export CHAINCODE_NAME=nft-dev
+export MSP_ID=Org1MSP
+export CA_NAME=org1-ca.default
+export HLF_USER=admin
+export NETWORK_CONFIG_PATH=../../../nft.yaml
+export PORT=3003
+```
+
+Lanzar el servidor
+
+```bash
+npm run server:dev
+```
+
+
+## Lanzar el servidor para Org2
+
+Declarar las variables en el .env
+
+```bash
+export CHANNEL_NAME=demo
+export CHAINCODE_NAME=nft-dev
+export MSP_ID=Org2MSP
+export CA_NAME=org2-ca.default
+export HLF_USER=admin
+export NETWORK_CONFIG_PATH=../../../nft.yaml
+export PORT=3004
 ```
 
 Lanzar el servidor

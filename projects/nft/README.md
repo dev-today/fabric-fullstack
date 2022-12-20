@@ -591,7 +591,7 @@ kubectl hlf inspect --output nft.yaml --namespace=default
 2. Registrar un usuario en la autoridad de certificacion para firma
 ```bash
 kubectl hlf ca register --name=org1-ca --namespace=default --user=admin --secret=adminpw --type=admin \
- --enroll-id enroll --enroll-secret=enrollpw --mspid Org1MSP  
+ --enroll-id enroll --enroll-secret=enrollpw --mspid Org1MSP
 ```
 
 3. Obtener los certificados utilizando el usuario creado anteriormente
@@ -619,7 +619,29 @@ kubectl hlf ca enroll --name=org2-ca --namespace=default --user=admin --secret=a
         --ca-name ca  --output peer-org2.yaml
 ```
 
-4. Adjuntar el usuario a la cadena de conexion
+7. Adjuntar el usuario a la cadena de conexion
 ```bash
 kubectl hlf utils adduser --userPath=peer-org2.yaml --config=nft.yaml --username=admin --mspid=Org2MSP
 ```
+
+Añadir clientes a org1 y org2:
+
+```bash
+kubectl hlf ca register --name=org1-ca --namespace=default --user=client-org1 --secret=clientpw --type=client \
+ --enroll-id enroll --enroll-secret=enrollpw --mspid Org1MSP  
+
+kubectl hlf ca enroll --name=org1-ca --namespace=default --user=client-org1 --secret=clientpw --mspid Org1MSP \
+        --ca-name ca  --output user-org1.yaml
+
+kubectl hlf ca register --name=org2-ca --namespace=default --user=client-org2 --secret=clientpw --type=client \
+ --enroll-id enroll --enroll-secret=enrollpw --mspid Org2MSP  
+
+kubectl hlf ca enroll --name=org2-ca --namespace=default --user=client-org2 --secret=clientpw --mspid Org2MSP \
+        --ca-name ca  --output user-org2.yaml
+
+
+kubectl hlf utils adduser --userPath=user-org1.yaml --config=nft.yaml --username=user-org1 --mspid=Org1MSP
+kubectl hlf utils adduser --userPath=user-org2.yaml --config=nft.yaml --username=user-org2 --mspid=Org2MSP
+
+```
+

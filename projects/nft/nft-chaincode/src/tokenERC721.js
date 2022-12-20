@@ -10,6 +10,7 @@ const nameKey = "name";
 const symbolKey = "symbol";
 const tslog = require("tslog");
 const log = new tslog.Logger({});
+
 class TokenERC721Contract extends Contract {
   async ping(ctx) {
     log.info("ping");
@@ -75,6 +76,7 @@ class TokenERC721Contract extends Contract {
    * @returns {Boolean} Devolver si la transferencia fue exitosa o no
    */
   async TransferFrom(ctx, from, to, tokenId) {
+    log.info(`TransferFrom from:"${from}" to:"${to}" tokenId:"${tokenId}"`);
     // verifique que las opciones de contrato ya estén configuradas primero para ejecutar la función
     await this.CheckInitialized(ctx);
 
@@ -456,18 +458,38 @@ class TokenERC721Contract extends Contract {
 
     return nft;
   }
+
   async limpiarChaincode(ctx) {
-    const iterator = await ctx.stub.getStateByPartialCompositeKey(
-      nftPrefix,
-      []
-    );
+    if (ctx.clientIdentity.getMSPID() !== "Org1MSP") {
+      throw new Error("El cliente no está autorizado a limpiar el chaincode");
+    }
+    let iterator = await ctx.stub.getStateByPartialCompositeKey(nftPrefix, []);
 
     let result = await iterator.next();
     while (!result.done) {
       await ctx.stub.deleteState(result.value.key);
       result = await iterator.next();
     }
-    return "OK"
+
+    iterator = await ctx.stub.getStateByPartialCompositeKey(balancePrefix, []);
+
+    result = await iterator.next();
+    while (!result.done) {
+      await ctx.stub.deleteState(result.value.key);
+      result = await iterator.next();
+    }
+
+    iterator = await ctx.stub.getStateByPartialCompositeKey(approvalPrefix, []);
+
+    result = await iterator.next();
+    while (!result.done) {
+      await ctx.stub.deleteState(result.value.key);
+      result = await iterator.next();
+    }
+
+    await ctx.stub.deleteState(nameKey);
+    await ctx.stub.deleteState(symbolKey);
+    return "OK";
   }
 
   /**
@@ -511,7 +533,7 @@ class TokenERC721Contract extends Contract {
   }
 
   async _readNFT(ctx, tokenId) {
-    const nftKey = ctx.stub.createCompositeKey(nftPrefix, [tokenId]);
+    const nftKey = ctx.stub.createCompositeKey(nftPrefix, [tokenId]); // nft\u0000XXXXX
     const nftBytes = await ctx.stub.getState(nftKey);
     if (!nftBytes || nftBytes.length === 0) {
       throw new Error(`El tokenid ${tokenId} no es válido. No existe`);
@@ -540,6 +562,7 @@ class TokenERC721Contract extends Contract {
     const clientAccountID = ctx.clientIdentity.getID();
     return this.BalanceOf(ctx, clientAccountID);
   }
+
 
   // ClientAccountID devuelve el id de la cuenta del cliente solicitante.
   // En esta implementación, el ID de la cuenta del cliente es el propio ID del cliente.

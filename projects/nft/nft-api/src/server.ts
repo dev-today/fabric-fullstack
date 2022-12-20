@@ -356,7 +356,7 @@ async function main() {
 
 
     const server = app.listen(
-        {
+        {   
             port: process.env.PORT || 3003,
             host: process.env.HOST || "0.0.0.0",
         },

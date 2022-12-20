@@ -17,6 +17,9 @@ export const config: Config = {
 }
 
 export function checkConfig() {
+    if (!config.caName) {
+        throw new Error("CA_NAME is not set");
+    }
     if (!config.channelName) {
         throw new Error("CHANNEL_NAME is not set");
     }
