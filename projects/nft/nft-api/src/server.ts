@@ -1,8 +1,6 @@
-import { connect, ConnectOptions, Identity, Signer, signers } from '@hyperledger/fabric-gateway';
+import { connect } from '@hyperledger/fabric-gateway';
 import "reflect-metadata";
 
-import * as grpc from '@grpc/grpc-js';
-import * as crypto from 'crypto';
 import { User } from 'fabric-common';
 import { promises as fs } from 'fs';
 import * as _ from "lodash";
@@ -12,49 +10,9 @@ import * as yaml from "yaml";
 import { checkConfig, config } from './config';
 import FabricCAServices = require("fabric-ca-client")
 import express = require("express")
+import { newGrpcConnection, newConnectOptions } from './utils';
 
 const log = new Logger({ name: "nft-api" })
-
-export async function newGrpcConnection(peerEndpoint: string, tlsRootCert: Buffer): Promise<grpc.Client> {
-    const tlsCredentials = grpc.credentials.createSsl(tlsRootCert);
-    return new grpc.Client(peerEndpoint, tlsCredentials, {});
-}
-
-export async function newConnectOptions(
-    client: grpc.Client,
-    mspId: string,
-    credentials: Uint8Array,
-    privateKeyPem: string
-): Promise<ConnectOptions> {
-    return {
-        client,
-        identity: await newIdentity(mspId, credentials),
-        signer: await newSigner(privateKeyPem),
-        // Default timeouts for different gRPC calls
-        evaluateOptions: () => {
-            return { deadline: Date.now() + 5000 }; // 5 seconds
-        },
-        endorseOptions: () => {
-            return { deadline: Date.now() + 15000 }; // 15 seconds
-        },
-        submitOptions: () => {
-            return { deadline: Date.now() + 5000 }; // 5 seconds
-        },
-        commitStatusOptions: () => {
-            return { deadline: Date.now() + 60000 }; // 1 minute
-        },
-    };
-}
-
-async function newIdentity(mspId: string, credentials: Uint8Array): Promise<Identity> {
-
-    return { mspId, credentials };
-}
-
-async function newSigner(privateKeyPem: string): Promise<Signer> {
-    const privateKey = crypto.createPrivateKey(privateKeyPem);
-    return signers.newPrivateKeySigner(privateKey);
-}
 
 
 async function main() {
@@ -119,22 +77,15 @@ async function main() {
         res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
         next();
     })
-    const tokenName = "CDC"
-    const tokenSymbol = "$"
-    try {
-        const initialized = await contract.submitTransaction("Initialize", tokenName, tokenSymbol)
-        log.info("Initialized: ", initialized.toString())
-    } catch (e) {
-        log.info("Already initialized")
-    }
     app.post("/init", async (req, res) => {
         try {
+            const { tokenName, tokenSymbol } = req.query as any
             const initialized = await contract.submitTransaction("Initialize", tokenName, tokenSymbol)
             log.info("Initialized: ", initialized.toString())
+            res.send("Initialized")
         } catch (e) {
-            log.info("Already initialized")
+            res.send(`Error initializing ${e}`)
         }
-        res.send("Initialized")
     })
     const users = {}
     app.post("/signup", async (req, res) => {
@@ -356,7 +307,7 @@ async function main() {
 
 
     const server = app.listen(
-        {   
+        {
             port: process.env.PORT || 3003,
             host: process.env.HOST || "0.0.0.0",
         },

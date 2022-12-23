@@ -2,45 +2,26 @@
 
 Este API expone via HTTP las operaciones que se pueden realizar sobre el chaincode NFT.
 
+## Instalar librerias
+```bash
+npm install
+```
+
+
 ## Lanzar el servidor para Org1
 
-Declarar las variables en el .env
+Lanzar el servidor para la Org1
 
 ```bash
-export CHANNEL_NAME=demo
-export CHAINCODE_NAME=nft-dev
-export MSP_ID=Org1MSP
-export CA_NAME=org1-ca.default
-export HLF_USER=admin
-export NETWORK_CONFIG_PATH=../../../nft.yaml
-export PORT=3003
+npm run server:org1:dev
 ```
-
-Lanzar el servidor
-
-```bash
-npm run server:dev
-```
-
 
 ## Lanzar el servidor para Org2
 
-Declarar las variables en el .env
+Lanzar el servidor para la Org2
 
 ```bash
-export CHANNEL_NAME=demo
-export CHAINCODE_NAME=nft-dev
-export MSP_ID=Org2MSP
-export CA_NAME=org2-ca.default
-export HLF_USER=admin
-export NETWORK_CONFIG_PATH=../../../nft.yaml
-export PORT=3004
-```
-
-Lanzar el servidor
-
-```bash
-npm run server:dev
+npm run server:org2:dev
 ```
 
 ## Operaciones
@@ -76,14 +57,14 @@ http POST "http://localhost:3003/login" username="user1" password="user1pw"
 ### Crear un NFT
 
 ```bash
-http POST "http://localhost:3003/submit" x-user:user1 fcn=Mint "args[]=8"  \
+http POST "http://localhost:3003/submit" x-user:user1 fcn=Mint "args[]=9"  \
         "args[]=https://storage.googleapis.com/opensea-prod.appspot.com/puffs/3.png" "args[]=Nombre" "args[]=Descripcion"
 ```
 
 ### Obtener un NFT
 
 ```bash
-http POST "http://localhost:3003/evaluate" x-user:user1 fcn=GetToken "args[]=8"
+http POST "http://localhost:3003/evaluate" x-user:user1 fcn=GetToken "args[]=9"
 ```
 
 ### Registrar otro usuario
@@ -103,7 +84,7 @@ http POST "http://localhost:3003/login" username="user2" password="user2pw"
 ## Mintear un NFT
 
 ```bash
-http POST "http://localhost:3003/submit" x-user:user2 fcn=Mint "args[]=9"  \
+http POST "http://localhost:3003/submit" x-user:user2 fcn=Mint "args[]=10"  \
         "args[]=https://storage.googleapis.com/opensea-prod.appspot.com/puffs/3.png" "args[]=Nombre2" "args[]=Descripcion2"
 ```
 
@@ -116,9 +97,9 @@ http GET "http://localhost:3003/id" x-user:user1
 ## Transferir token de usuario 2 a usuario 1
 
 ```bash
-http POST "http://localhost:3003/submit" x-user:user2 fcn=TransferFrom \
-        "args[]=x509::/OU=client/CN=user2::/C=ES/L=Alicante/=Alicante/O=Kung Fu Software/OU=Tech/CN=ca" \
+http POST "http://localhost:3003/submit" x-user:user1 fcn=TransferFrom \
         "args[]=x509::/OU=client/CN=user1::/C=ES/L=Alicante/=Alicante/O=Kung Fu Software/OU=Tech/CN=ca" \
+        "args[]=x509::/OU=client/CN=user2::/C=ES/L=Alicante/=Alicante/O=Kung Fu Software/OU=Tech/CN=ca" \
         "args[]=9"
 
 ```
@@ -134,3 +115,42 @@ http POST "http://localhost:3003/evaluate" x-user:user2 fcn=OwnerOf "args[]=9"
 ```bash
 http POST "http://localhost:3003/submit" x-user:user2 fcn=limpiarChaincode
 ```
+
+
+### Registrar otro usuario
+
+```bash
+http POST "http://localhost:3004/signup" username="user2-org2" password="user2pw"
+```
+
+### Logearnos con otro usuario
+
+Esta operacion se tiene que hacer siempre que el programa se reinicie
+
+```bash
+http POST "http://localhost:3004/login" username="user2-org2" password="user2pw"
+```
+
+## Obtener identidad del usuario 1
+
+```bash
+http GET "http://localhost:3004/id" x-user:user2-org2
+```
+
+
+## Transferir token de usuario 2 (Org1) a usuario 2 (Org2)
+
+```bash
+http POST "http://localhost:3003/submit" x-user:user2 fcn=TransferFrom \
+        "args[]=x509::/OU=client/CN=user2::/C=ES/L=Alicante/=Alicante/O=Kung Fu Software/OU=Tech/CN=ca" \
+        "args[]=x509::/OU=client/CN=user2-org2::/C=ES/L=Alicante/=Alicante/O=Kung Fu Software/OU=Tech/CN=ca" \
+        "args[]=9"
+
+```
+
+## Comprobar owner del token transferido
+
+```bash
+http POST "http://localhost:3003/evaluate" x-user:user2 fcn=OwnerOf "args[]=9"
+```
+

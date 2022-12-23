@@ -7,7 +7,7 @@
     "build:w": "tsc --watch",
     "server": "node dist/server.js",
     "server:org1:dev": "dotenv -e ./.env.org1 ts-node-dev ./src/server.ts",
-    "server:org2:dev": "dotenv -e ./.env.org2  ts-node-dev ./src/server.ts",
+    "server:org2:dev": "dotenv -e ./.env.org2 ts-node-dev ./src/server.ts",
     "start:dev:debug": "dotenv -e .env -e ./.env ts-node-dev --transpile-only --respawn --inspect=14321 ./src/index.ts"
   },
   "dependencies": {
