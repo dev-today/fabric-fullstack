@@ -1,10 +1,11 @@
-import { connect } from '@hyperledger/fabric-gateway';
 import "reflect-metadata";
+
+import { connect } from '@hyperledger/fabric-gateway';
 
 import { User } from 'fabric-common';
 import { promises as fs } from 'fs';
 import * as _ from "lodash";
-import { AddressInfo } from "net";
+import type { AddressInfo } from "net";
 import { Logger } from "tslog";
 import * as yaml from "yaml";
 import { checkConfig, config } from './config';
@@ -19,6 +20,9 @@ async function main() {
     checkConfig()
     const networkConfig = yaml.parse(await fs.readFile(config.networkConfigPath, 'utf8'));
     const orgPeerNames = _.get(networkConfig, `organizations.${config.mspID}.peers`)
+    if (!orgPeerNames) {
+        throw new Error(`Organization ${config.mspID} doesn't have any peers`);
+    }
     let peerUrl: string = "";
     let peerCACert: string = "";
     let idx = 0
@@ -33,6 +37,9 @@ async function main() {
             break;
         }
     }
+    if (!peerUrl || !peerCACert) {
+        throw new Error(`Organization ${config.mspID} doesn't have any peers`);
+    }
     const ca = networkConfig.certificateAuthorities[config.caName]
     if (!ca) {
         throw new Error(`Certificate authority ${config.caName} not found in network configuration`);
@@ -43,23 +50,31 @@ async function main() {
     }
 
     const fabricCAServices = new FabricCAServices(caURL, {
-        trustedRoots: [],
-        verify: false,
-    }, "ca")
+        trustedRoots: [ca.tlsCACerts.pem[0]],
+        verify: true,
+    }, ca.caName)
 
     const identityService = fabricCAServices.newIdentityService()
     const registrarUserResponse = await fabricCAServices.enroll({
-        enrollmentID: "enroll",
-        enrollmentSecret: "enrollpw"
+        enrollmentID: ca.registrar.enrollId,
+        enrollmentSecret: ca.registrar.enrollSecret
     });
 
-    const registrar = User.createUser("enroll", "enrollpw", config.mspID, registrarUserResponse.certificate, registrarUserResponse.key.toBytes());
+    const registrar = User.createUser(
+        ca.registrar.enrollId,
+        ca.registrar.enrollSecret,
+        config.mspID,
+        registrarUserResponse.certificate,
+        registrarUserResponse.key.toBytes()
+    );
 
 
     const adminUser = _.get(networkConfig, `organizations.${config.mspID}.users.${config.hlfUser}`)
     const userCertificate = _.get(adminUser, "cert.pem")
     const userKey = _.get(adminUser, "key.pem")
-
+    if (!userCertificate || !userKey) {
+        throw new Error(`User ${config.hlfUser} not found in network configuration`);
+    }
     const grpcConn = await newGrpcConnection(peerUrl, Buffer.from(peerCACert))
     const connectOptions = await newConnectOptions(
         grpcConn,
@@ -76,7 +91,7 @@ async function main() {
         res.header("Access-Control-Allow-Origin", "*");
         res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
         next();
-    })
+    });
     app.post("/init", async (req, res) => {
         try {
             const { tokenName, tokenSymbol } = req.query as any
@@ -84,7 +99,7 @@ async function main() {
             log.info("Initialized: ", initialized.toString())
             res.send("Initialized")
         } catch (e) {
-            res.send(`Error initializing ${e}`)
+            res.send(e.details && e.details.length ? e.details : e.message);
         }
     })
     const users = {}
@@ -101,7 +116,7 @@ async function main() {
             res.send("Username already taken")
             return
         }
-        const r = await fabricCAServices.register({
+        await fabricCAServices.register({
             enrollmentID: username,
             enrollmentSecret: password,
             affiliation: "",
@@ -152,63 +167,6 @@ async function main() {
             next(e)
         }
     })
-    app.get("/nfts/:id", async (req, res) => {
-        const id = req.params.id
-        try {
-            const responseBuffer = await (req as any).contract.evaluateTransaction("GetToken", id)
-            const responseString = Buffer.from(responseBuffer).toString();
-            res.send(responseString)
-        } catch (e) {
-            res.status(400)
-            if (e.details) {
-                res.send(e.details)
-            } else {
-                res.send(e.message);
-            }
-        }
-    })
-    app.get("/nfts", async (req, res) => {
-        try {
-            const responseBuffer = await (req as any).contract.evaluateTransaction("GetTokens")
-            const responseString = Buffer.from(responseBuffer).toString();
-            res.send(responseString)
-        } catch (e) {
-            res.status(400)
-            if (e.details && e.details.length) {
-                res.send(e.details)
-            } else {
-                res.send(e.message);
-            }
-        }
-    })
-    app.get("/id", async (req, res) => {
-        try {
-            const responseBuffer = await (req as any).contract.evaluateTransaction("ClientAccountID")
-            const responseString = Buffer.from(responseBuffer).toString();
-            res.send(responseString)
-        } catch (e) {
-            res.status(400)
-            if (e.details) {
-                res.send(e.details)
-            } else {
-                res.send(e.message);
-            }
-        }
-    })
-    app.get("/total", async (req, res) => {
-        try {
-            const responseBuffer = await (req as any).contract.evaluateTransaction("TotalSupply")
-            const responseString = Buffer.from(responseBuffer).toString();
-            res.send(responseString)
-        } catch (e) {
-            res.status(400)
-            if (e.details) {
-                res.send(e.details)
-            } else {
-                res.send(e.message);
-            }
-        }
-    })
     app.get("/ping", async (req, res) => {
         try {
             const responseBuffer = await (req as any).contract.evaluateTransaction("ping");
@@ -216,17 +174,17 @@ async function main() {
             res.send(responseString);
         } catch (e) {
             res.status(400)
-            res.send(e.message);
+            res.send(e.details && e.details.length ? e.details : e.message);
         }
     })
-    app.get("/balance", async (req, res) => {
+    app.get("/id", async (req, res) => {
         try {
-            const responseBuffer = await (req as any).contract.evaluateTransaction("ClientAccountBalance");
+            const responseBuffer = await (req as any).contract.evaluateTransaction("ClientAccountID");
             const responseString = Buffer.from(responseBuffer).toString();
             res.send(responseString);
         } catch (e) {
             res.status(400)
-            res.send(e.message);
+            res.send(e.details && e.details.length ? e.details : e.message);
         }
     })
     app.post("/evaluate", async (req, res) => {
@@ -252,59 +210,6 @@ async function main() {
             res.send(e.details && e.details.length ? e.details : e.message);
         }
     })
-    app.get("/mint", async (req, res) => {
-        try {
-            const { tokenId, tokenUri } = req.query as { tokenId: string, tokenUri: string }
-            if (!tokenId || !tokenUri) {
-                throw new Error("Missing tokenId or tokenUri")
-            }
-            const fcn = "Mint"
-            const responseBuffer = await (req as any).contract.submitTransaction(fcn, tokenId, tokenUri);
-            const responseString = Buffer.from(responseBuffer).toString();
-            res.send(responseString);
-        } catch (e) {
-            res.status(400)
-            res.send(e.message);
-        }
-    })
-    app.get("/burn", async (req, res) => {
-        try {
-            const { tokenId, tokenUri } = req.query as { tokenId: string, tokenUri: string }
-            if (!tokenId || !tokenUri) {
-                throw new Error("Missing tokenId or tokenUri")
-            }
-            const fcn = "MintWithTokenURI"
-            const responseBuffer = await (req as any).contract.submitTransaction(fcn, tokenId, tokenUri);
-            const responseString = Buffer.from(responseBuffer).toString();
-            res.send(responseString);
-        } catch (e) {
-            res.status(400)
-            res.send(e.message);
-        }
-    })
-
-    app.get("/transfer", async (req, res) => {
-        try {
-            const { tokenId, from, to } = req.query as { from: string, to: string, tokenId: string }
-            if (!tokenId) {
-                throw new Error("Missing tokenId")
-            }
-            if (!from) {
-                throw new Error("Missing from")
-            }
-            if (!to) {
-                throw new Error("Missing to")
-            }
-            const fcn = "TransferFrom"
-            const responseBuffer = await (req as any).contract.submitTransaction(fcn, from, to, tokenId);
-            const responseString = Buffer.from(responseBuffer).toString();
-            res.send(responseString);
-        } catch (e) {
-            res.status(400)
-            res.send(e.message);
-        }
-    })
-
 
     const server = app.listen(
         {

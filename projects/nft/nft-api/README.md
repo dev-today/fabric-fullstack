@@ -37,13 +37,20 @@ Debe devolver `pong`
 ### Inicializar el smart contract
 
 ```bash
-http POST "http://localhost:3003/init?tokenName=CDC&tokenSymbol=$"
+http POST "http://localhost:3003/init?tokenName=Dolar&tokenSymbol=$"
 ```
 
 ### Registrar un usuario
 
 ```bash
 http POST "http://localhost:3003/signup" username="user1" password="user1pw"
+```
+
+```json
+{
+        "username": "user1",
+        "password": "user1pw"
+}
 ```
 
 ### Logearnos con el usuario
