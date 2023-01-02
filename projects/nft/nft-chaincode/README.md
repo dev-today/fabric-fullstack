@@ -47,14 +47,14 @@ kubectl hlf chaincode install --path=./chaincode.tgz \
 ## Aprobar chaincode
 ```bash
 export CHAINCODE_NAME=nft-dev
-export SEQUENCE=2
+export SEQUENCE=1
 export VERSION="1.0"
-kubectl hlf chaincode approveformyorg --config=${CP_FILE} --user=user-org1 --peer=org2-peer0.default \
+kubectl hlf chaincode approveformyorg --config=${CP_FILE} --user=admin --peer=org2-peer0.default \
     --package-id=$PACKAGE_ID \
     --version "$VERSION" --sequence "$SEQUENCE" --name="${CHAINCODE_NAME}" \
     --policy="OR('Org1MSP.member', 'Org2MSP.member')" --channel=demo
 
-kubectl hlf chaincode approveformyorg --config=${CP_FILE} --user=user-org1 --peer=org1-peer0.default \
+kubectl hlf chaincode approveformyorg --config=${CP_FILE} --user=admin --peer=org1-peer0.default \
     --package-id=$PACKAGE_ID \
     --version "$VERSION" --sequence "$SEQUENCE" --name="${CHAINCODE_NAME}" \
     --policy="OR('Org1MSP.member', 'Org2MSP.member')" --channel=demo
