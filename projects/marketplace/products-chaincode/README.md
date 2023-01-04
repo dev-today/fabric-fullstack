@@ -49,19 +49,19 @@ export VERSION="1.0"
 kubectl hlf chaincode approveformyorg --config="${CP_FILE}" --user=admin --peer=marketplace-peer0.marketplace \
     --package-id=$PACKAGE_ID \
     --version "$VERSION" --sequence "$SEQUENCE" --name="${CHAINCODE_NAME}" \
-    --policy="OR('MarketplaceMSP.member')" --channel=demo3
+    --policy="OR('MarketplaceMSP.member', 'SonyMSP.member')" --channel=demo
 
 kubectl hlf chaincode approveformyorg --config="${CP_FILE}" --user=admin --peer=sony-peer0.marketplace \
     --package-id=$PACKAGE_ID \
     --version "$VERSION" --sequence "$SEQUENCE" --name="${CHAINCODE_NAME}" \
-    --policy="OR('MarketplaceMSP.member', 'SonyMSP.member')" --channel=demo3
+    --policy="OR('MarketplaceMSP.member', 'SonyMSP.member')" --channel=demo
 ```
 
 ## Commit chaincode
 ```bash
-kubectl hlf chaincode commit --config=${CP_FILE} --user=admin --mspid=Org1MSP \
+kubectl hlf chaincode commit --config="${CP_FILE}" --user=admin --mspid=MarketplaceMSP \
     --version "$VERSION" --sequence "$SEQUENCE" --name="${CHAINCODE_NAME}" \
-    --policy="OR('Org1MSP.member')" --channel=demo3
+    --policy="OR('MarketplaceMSP.member', 'SonyMSP.member')" --channel=demo
 ```
 
 
@@ -80,8 +80,88 @@ npm run chaincode:start
 ```bash
 export CP_FILE=$PWD/../../../marketplace.yaml
 kubectl hlf chaincode query --config=$CP_FILE \
-    --user=admin --peer=org1-peer0.default \
+    --user=admin --peer=marketplace-peer0.marketplace \
     --chaincode=product-dev --channel=demo \
     --fcn=Ping
 ```
 
+
+### Crear producto
+
+```bash
+kubectl hlf chaincode invoke --config=$CP_FILE \
+    --user=user-sony --peer=sony-peer0.marketplace \
+    --chaincode=product-dev --channel=demo \
+    --fcn=createProduct -a '1' -a 'Ipad Pro' -a 'Tablet de Apple' -a '699' -a '10'
+
+```
+
+
+### Obtener un producto
+
+```bash
+kubectl hlf chaincode query --config=$CP_FILE \
+    --user=user-sony --peer=sony-peer0.marketplace \
+    --chaincode=product-dev --channel=demo \
+    --fcn=getProduct -a '1'
+```
+
+### Add fondos a nuestra cuenta
+
+```bash
+kubectl hlf chaincode invoke --config=$CP_FILE \
+    --user=user-marketplace --peer=marketplace-peer0.marketplace \
+    --chaincode=product-dev --channel=demo \
+    --fcn=setMyBalance -a '3500'
+```
+
+### Obtener nuestros fondos
+
+```bash
+kubectl hlf chaincode query --config=$CP_FILE \
+    --user=user-marketplace --peer=marketplace-peer0.marketplace \
+    --chaincode=product-dev --channel=demo \
+    --fcn=getMyBalance
+```
+
+
+### Comprar un producto
+
+Como usuario del marketplace, voy a comprar un producto
+
+
+```bash
+
+kubectl hlf chaincode invoke --config=$CP_FILE \
+    --user=user-marketplace --peer=marketplace-peer0.marketplace \
+    --chaincode=product-dev --channel=demo \
+    --fcn=comprar -a '1' -a '2' 
+```
+
+Obtener balance de nuevo para ver como ha bajado, tiene que estar en 2102:
+```bash
+kubectl hlf chaincode query --config=$CP_FILE \
+    --user=user-marketplace --peer=marketplace-peer0.marketplace \
+    --chaincode=product-dev --channel=demo \
+    --fcn=getMyBalance
+
+```
+
+### Obtener nuestros productos
+
+```bash
+kubectl hlf chaincode query --config=$CP_FILE \
+    --user=user-marketplace --peer=marketplace-peer0.marketplace \
+    --chaincode=product-dev --channel=demo \
+    --fcn=getMyVentas
+
+```
+
+### Comprobar que no podemos comprar mas de 10 productos
+```bash
+kubectl hlf chaincode invoke --config=$CP_FILE \
+    --user=user-marketplace --peer=marketplace-peer0.marketplace \
+    --chaincode=product-dev --channel=demo \
+    --fcn=comprar -a '1' -a '10' 
+
+```

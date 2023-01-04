@@ -26,7 +26,7 @@ Para instalar helm: [https://helm.sh/es/docs/intro/install/](https://helm.sh/es/
 ```bash
 helm repo add kfs https://kfsoftware.github.io/hlf-helm-charts --force-update
 
-helm install hlf-operator --version=1.8.0 --set image.tag=v1.8.0 kfs/hlf-operator
+helm install hlf-operator --version=1.8.2 --set image.tag=v1.8.3 kfs/hlf-operator
 ```
 
 ### Instalar plugin de Kubectl
@@ -44,7 +44,8 @@ kubectl krew install hlf
 
 Instalar binarios de Istio en la maquina:
 ```bash
-curl -L https://istio.io/downloadIstio | sh -
+curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.16.1 TARGET_ARCH=x86_64 sh -
+export PATH="$PATH:$PWD/istio-1.16.1/bin"
 ```
 
 Instalar Istio en el cluster de Kubernetes:
@@ -396,10 +397,10 @@ kubectl apply -f - <<EOF
 apiVersion: hlf.kungfusoftware.es/v1alpha1
 kind: FabricMainChannel
 metadata:
-  name: demo3-marketplace
+  name: demo-marketplace
   namespace: marketplace
 spec:
-  name: demo3
+  name: demo
   adminOrdererOrganizations:
     - mspID: OrdererMSP
   adminPeerOrganizations:
@@ -494,7 +495,7 @@ kubectl apply -f - <<EOF
 apiVersion: hlf.kungfusoftware.es/v1alpha1
 kind: FabricFollowerChannel
 metadata:
-  name: demo3-marketplacemsp
+  name: demo-marketplacemsp
 spec:
   anchorPeers:
     - host: peer0-marketplace.localho.st
@@ -504,7 +505,7 @@ spec:
     secretName: wallet
     secretNamespace: marketplace
   mspId: MarketplaceMSP
-  name: demo3
+  name: demo
   orderers:
     - certificate: |
 ${ORDERER0_TLS_CERT}
@@ -540,7 +541,7 @@ kubectl apply -f - <<EOF
 apiVersion: hlf.kungfusoftware.es/v1alpha1
 kind: FabricFollowerChannel
 metadata:
-  name: demo3-sonymsp
+  name: demo-sonymsp
 spec:
   anchorPeers:
     - host: peer0-sony.localho.st
@@ -550,7 +551,7 @@ spec:
     secretName: wallet
     secretNamespace: marketplace
   mspId: SonyMSP
-  name: demo3
+  name: demo
   orderers:
     - certificate: |
 ${ORDERER0_TLS_CERT}
@@ -627,6 +628,28 @@ kubectl hlf ca enroll --name=sony-ca --namespace=marketplace --user=admin --secr
 4. Adjuntar el usuario a la cadena de conexion
 ```bash
 kubectl hlf utils adduser --userPath=peer-sony.yaml --config=marketplace.yaml --username=admin --mspid=SonyMSP
+```
+
+
+Añadir clientes a org1 y org2:
+
+```bash
+kubectl hlf ca register --name=marketplace-ca --namespace=marketplace --user=client-marketplace --secret=clientpw --type=client \
+ --enroll-id enroll --enroll-secret=enrollpw --mspid MarketplaceMSP  
+
+kubectl hlf ca enroll --name=marketplace-ca --namespace=marketplace --user=client-marketplace --secret=clientpw --mspid MarketplaceMSP \
+        --ca-name ca  --output user-marketplace.yaml
+
+kubectl hlf ca register --name=sony-ca --namespace=marketplace --user=client-sony --secret=clientpw --type=client \
+ --enroll-id enroll --enroll-secret=enrollpw --mspid SonyMSP  
+
+kubectl hlf ca enroll --name=sony-ca --namespace=marketplace --user=client-sony --secret=clientpw --mspid SonyMSP \
+        --ca-name ca  --output user-sony.yaml
+
+
+kubectl hlf utils adduser --userPath=user-marketplace.yaml --config=marketplace.yaml --username=user-marketplace --mspid=MarketplaceMSP
+kubectl hlf utils adduser --userPath=user-sony.yaml --config=marketplace.yaml --username=user-sony --mspid=SonyMSP
+
 ```
 
 
