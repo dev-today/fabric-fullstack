@@ -13,7 +13,7 @@ import { checkConfig, config } from './config';
 import FabricCAServices = require("fabric-ca-client")
 import express = require("express")
 
-const log = new Logger({ name: "nft-api" })
+const log = new Logger({ name: "products-api" })
 
 export async function newGrpcConnection(peerEndpoint: string, tlsRootCert: Buffer): Promise<grpc.Client> {
     const tlsCredentials = grpc.credentials.createSsl(tlsRootCert);
@@ -206,63 +206,7 @@ async function main() {
             next(e)
         }
     })
-    app.get("/nfts/:id", async (req, res) => {
-        const id = req.params.id
-        try {
-            const responseBuffer = await (req as any).contract.evaluateTransaction("GetToken", id)
-            const responseString = Buffer.from(responseBuffer).toString();
-            res.send(responseString)
-        } catch (e) {
-            res.status(400)
-            if (e.details) {
-                res.send(e.details)
-            } else {
-                res.send(e.message);
-            }
-        }
-    })
-    app.get("/nfts", async (req, res) => {
-        try {
-            const responseBuffer = await (req as any).contract.evaluateTransaction("GetTokens")
-            const responseString = Buffer.from(responseBuffer).toString();
-            res.send(responseString)
-        } catch (e) {
-            res.status(400)
-            if (e.details && e.details.length) {
-                res.send(e.details)
-            } else {
-                res.send(e.message);
-            }
-        }
-    })
-    app.get("/id", async (req, res) => {
-        try {
-            const responseBuffer = await (req as any).contract.evaluateTransaction("ClientAccountID")
-            const responseString = Buffer.from(responseBuffer).toString();
-            res.send(responseString)
-        } catch (e) {
-            res.status(400)
-            if (e.details) {
-                res.send(e.details)
-            } else {
-                res.send(e.message);
-            }
-        }
-    })
-    app.get("/total", async (req, res) => {
-        try {
-            const responseBuffer = await (req as any).contract.evaluateTransaction("TotalSupply")
-            const responseString = Buffer.from(responseBuffer).toString();
-            res.send(responseString)
-        } catch (e) {
-            res.status(400)
-            if (e.details) {
-                res.send(e.details)
-            } else {
-                res.send(e.message);
-            }
-        }
-    })
+
     app.get("/ping", async (req, res) => {
         try {
             const responseBuffer = await (req as any).contract.evaluateTransaction("Ping");
@@ -273,16 +217,7 @@ async function main() {
             res.send(e.message);
         }
     })
-    app.get("/balance", async (req, res) => {
-        try {
-            const responseBuffer = await (req as any).contract.evaluateTransaction("ClientAccountBalance");
-            const responseString = Buffer.from(responseBuffer).toString();
-            res.send(responseString);
-        } catch (e) {
-            res.status(400)
-            res.send(e.message);
-        }
-    })
+
     app.post("/evaluate", async (req, res) => {
         try {
             const fcn = req.body.fcn
@@ -306,60 +241,6 @@ async function main() {
             res.send(e.details && e.details.length ? e.details : e.message);
         }
     })
-    app.get("/mint", async (req, res) => {
-        try {
-            const { tokenId, tokenUri } = req.query as { tokenId: string, tokenUri: string }
-            if (!tokenId || !tokenUri) {
-                throw new Error("Missing tokenId or tokenUri")
-            }
-            const fcn = "MintWithTokenURI"
-            const responseBuffer = await (req as any).contract.submitTransaction(fcn, tokenId, tokenUri);
-            const responseString = Buffer.from(responseBuffer).toString();
-            res.send(responseString);
-        } catch (e) {
-            res.status(400)
-            res.send(e.message);
-        }
-    })
-    app.get("/burn", async (req, res) => {
-        try {
-            const { tokenId, tokenUri } = req.query as { tokenId: string, tokenUri: string }
-            if (!tokenId || !tokenUri) {
-                throw new Error("Missing tokenId or tokenUri")
-            }
-            const fcn = "MintWithTokenURI"
-            const responseBuffer = await (req as any).contract.submitTransaction(fcn, tokenId, tokenUri);
-            const responseString = Buffer.from(responseBuffer).toString();
-            res.send(responseString);
-        } catch (e) {
-            res.status(400)
-            res.send(e.message);
-        }
-    })
-
-    app.get("/transfer", async (req, res) => {
-        try {
-            const { tokenId, from, to } = req.query as { from: string, to: string, tokenId: string }
-            if (!tokenId) {
-                throw new Error("Missing tokenId")
-            }
-            if (!from) {
-                throw new Error("Missing from")
-            }
-            if (!to) {
-                throw new Error("Missing to")
-            }
-            const fcn = "TransferFrom"
-            const responseBuffer = await (req as any).contract.submitTransaction(fcn, from, to, tokenId);
-            const responseString = Buffer.from(responseBuffer).toString();
-            res.send(responseString);
-        } catch (e) {
-            res.status(400)
-            res.send(e.message);
-        }
-    })
-
-
     const server = app.listen(
         {
             port: process.env.PORT || 3004,
