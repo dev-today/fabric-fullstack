@@ -1,4 +1,5 @@
 export interface Config {
+    caName: string;
     channelName: string;
     chaincodeName: string;
     mspID: string;
@@ -7,6 +8,7 @@ export interface Config {
 }
 
 export const config: Config = {
+    caName: process.env.CA_NAME,
     channelName: process.env.CHANNEL_NAME,
     chaincodeName: process.env.CHAINCODE_NAME,
     mspID: process.env.MSP_ID,
@@ -15,6 +17,9 @@ export const config: Config = {
 }
 
 export function checkConfig() {
+    if (!config.caName) {
+        throw new Error("CA_NAME is not set");
+    }
     if (!config.channelName) {
         throw new Error("CHANNEL_NAME is not set");
     }

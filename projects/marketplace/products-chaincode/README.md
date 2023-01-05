@@ -7,6 +7,7 @@
 ```bash
 ngrok tcp 9998 --region=eu
 ```
+
 ```bash
 export CHAINCODE_ADDRESS=$(curl http://localhost:4040/api/tunnels | jq -r ".tunnels[0].public_url" | sed 's/.*tcp:\/\///')
 rm code.tar.gz chaincode.tgz
@@ -44,24 +45,24 @@ kubectl hlf chaincode install --path=./chaincode.tgz \
 ## Aprobar chaincode
 ```bash
 export CHAINCODE_NAME=product-dev
-export SEQUENCE=1
+export SEQUENCE=2
 export VERSION="1.0"
 kubectl hlf chaincode approveformyorg --config="${CP_FILE}" --user=admin --peer=marketplace-peer0.marketplace \
     --package-id=$PACKAGE_ID \
     --version "$VERSION" --sequence "$SEQUENCE" --name="${CHAINCODE_NAME}" \
-    --policy="OR('MarketplaceMSP.member', 'SonyMSP.member')" --channel=demo
+    --policy="AND('MarketplaceMSP.member', 'SonyMSP.member')" --channel=demo
 
 kubectl hlf chaincode approveformyorg --config="${CP_FILE}" --user=admin --peer=sony-peer0.marketplace \
     --package-id=$PACKAGE_ID \
     --version "$VERSION" --sequence "$SEQUENCE" --name="${CHAINCODE_NAME}" \
-    --policy="OR('MarketplaceMSP.member', 'SonyMSP.member')" --channel=demo
+    --policy="AND('MarketplaceMSP.member', 'SonyMSP.member')" --channel=demo
 ```
 
 ## Commit chaincode
 ```bash
 kubectl hlf chaincode commit --config="${CP_FILE}" --user=admin --mspid=MarketplaceMSP \
     --version "$VERSION" --sequence "$SEQUENCE" --name="${CHAINCODE_NAME}" \
-    --policy="OR('MarketplaceMSP.member', 'SonyMSP.member')" --channel=demo
+    --policy="AND('MarketplaceMSP.member', 'SonyMSP.member')" --channel=demo
 ```
 
 
@@ -85,6 +86,20 @@ kubectl hlf chaincode query --config=$CP_FILE \
     --fcn=Ping
 ```
 
+### Obtener mi identidad
+```bash
+export CP_FILE=$PWD/../../../marketplace.yaml
+kubectl hlf chaincode query --config=$CP_FILE \
+    --user=admin --peer=marketplace-peer0.marketplace \
+    --chaincode=product-dev --channel=demo \
+    --fcn=getMyIdentity
+
+kubectl hlf chaincode query --config=$CP_FILE \
+    --user=user-sony --peer=sony-peer0.marketplace \
+    --chaincode=product-dev --channel=demo \
+    --fcn=getMyIdentity
+```
+
 
 ### Crear producto
 
@@ -92,7 +107,7 @@ kubectl hlf chaincode query --config=$CP_FILE \
 kubectl hlf chaincode invoke --config=$CP_FILE \
     --user=user-sony --peer=sony-peer0.marketplace \
     --chaincode=product-dev --channel=demo \
-    --fcn=createProduct -a '1' -a 'Ipad Pro' -a 'Tablet de Apple' -a '699' -a '10'
+    --fcn=createProduct -a '1' -a 'PS5' -a 'Play Station 5' -a '699' -a '20'
 
 ```
 
@@ -113,6 +128,7 @@ kubectl hlf chaincode invoke --config=$CP_FILE \
     --user=user-marketplace --peer=marketplace-peer0.marketplace \
     --chaincode=product-dev --channel=demo \
     --fcn=setMyBalance -a '3500'
+
 ```
 
 ### Obtener nuestros fondos

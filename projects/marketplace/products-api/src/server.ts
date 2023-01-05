@@ -75,8 +75,14 @@ async function main() {
             break;
         }
     }
-    const caURL = "https://org1-ca.localho.st:443";
-
+    const ca = networkConfig.certificateAuthorities[config.caName]
+    if (!ca) {
+        throw new Error(`Certificate authority ${config.caName} not found in network configuration`);
+    }
+    const caURL = ca.url;
+    if (!caURL) {
+        throw new Error(`Certificate authority ${config.caName} does not have a URL`);
+    }
     const fabricCAServices = new FabricCAServices(caURL, {
         trustedRoots: [],
         verify: false,
@@ -84,11 +90,17 @@ async function main() {
 
     const identityService = fabricCAServices.newIdentityService()
     const registrarUserResponse = await fabricCAServices.enroll({
-        enrollmentID: "enroll",
-        enrollmentSecret: "enrollpw"
+        enrollmentID: ca.registrar.enrollId,
+        enrollmentSecret: ca.registrar.enrollSecret
     });
 
-    const registrar = User.createUser("enroll", "enrollpw", "Org1MSP", registrarUserResponse.certificate, registrarUserResponse.key.toBytes());
+    const registrar = User.createUser(
+        ca.registrar.enrollId,
+        ca.registrar.enrollSecret,
+        config.mspID,
+        registrarUserResponse.certificate,
+        registrarUserResponse.key.toBytes()
+    );
 
 
     const adminUser = _.get(networkConfig, `organizations.${config.mspID}.users.${config.hlfUser}`)

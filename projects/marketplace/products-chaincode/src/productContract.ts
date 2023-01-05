@@ -1,5 +1,7 @@
 import { Context } from "fabric-contract-api";
-import { ChaincodeStub } from "fabric-shim";
+import { v5 as uuidv5 } from "uuid";
+
+export const UUID_NAMESPACE = "1b671a64-40d5-491e-99b0-da01ff1f3341";
 
 const { Contract } = require("fabric-contract-api");
 
@@ -12,14 +14,33 @@ const tslog = require("tslog");
 const log = new tslog.Logger({});
 
 
+const ALLOWED_MSPS_CREAR_PRODUCTOS = ["SonyMSP"];
+const ALLOWED_MSPS_COMPRAR = ["MarketplaceMSP"];
 
 class ProductContract extends Contract {
-  async Ping(ctx) {
+  async getMyIdentity(ctx: Context) {
+
+    return {
+      id: ctx.clientIdentity.getID(),
+      mspId: ctx.clientIdentity.getMSPID(),
+    };
+  }
+  async Ping(ctx: Context) {
     log.info("ping");
     return "pong";
   }
 
-  async createProduct(ctx: Context, id: string, nombre: string, descripcion: string, precio: string, cantidad: string) {
+  async createProduct(
+    ctx: Context,
+    id: string,
+    nombre: string,
+    descripcion: string,
+    precio: string,
+    cantidad: string
+  ) {
+    if (!ALLOWED_MSPS_CREAR_PRODUCTOS.includes(ctx.clientIdentity.getMSPID())) {
+      throw new Error("No tienes permiso para crear productos");
+    }
     const productKey = ctx.stub.createCompositeKey(productPrefix, [id]);
     const precioInt = parseInt(precio);
     if (isNaN(precioInt)) {
@@ -47,7 +68,17 @@ class ProductContract extends Contract {
     const product = await ctx.stub.getState(productKey);
     return product.toString();
   }
-  async updateProduct(ctx: Context, id: string, nombre: string, descripcion: string, precio: string, cantidad: string) {
+  async updateProduct(
+    ctx: Context,
+    id: string,
+    nombre: string,
+    descripcion: string,
+    precio: string,
+    cantidad: string
+  ) {
+    if (!ALLOWED_MSPS_CREAR_PRODUCTOS.includes(ctx.clientIdentity.getMSPID())) {
+      throw new Error("No tienes permiso para actualizar productos");
+    }
     const productKey = ctx.stub.createCompositeKey(productPrefix, [id]);
     const precioInt = parseInt(precio);
     if (isNaN(precioInt)) {
@@ -69,6 +100,9 @@ class ProductContract extends Contract {
     return JSON.stringify(product);
   }
   async deleteProduct(ctx: Context, id: string) {
+    if (!ALLOWED_MSPS_CREAR_PRODUCTOS.includes(ctx.clientIdentity.getMSPID())) {
+      throw new Error("No tienes permiso para crear productos");
+    }
     const productKey = ctx.stub.createCompositeKey(productPrefix, [id]);
     await ctx.stub.deleteState(productKey);
   }
@@ -91,6 +125,9 @@ class ProductContract extends Contract {
   }
 
   async comprar(ctx: Context, id: string, cantidad: string) {
+    if (!ALLOWED_MSPS_COMPRAR.includes(ctx.clientIdentity.getMSPID())) {
+      throw new Error("No tienes permiso para comprar");
+    }
     const cantidadInt = parseInt(cantidad);
     if (isNaN(cantidadInt)) {
       throw new Error("La cantidad debe ser un número");
@@ -114,12 +151,14 @@ class ProductContract extends Contract {
     productJson.cantidad = productJson.cantidad - cantidadInt;
     await ctx.stub.putState(productKey, Buffer.from(JSON.stringify(productJson)));
 
-    const ventaKey = ctx.stub.createCompositeKey(ventaPrefix, [ctx.clientIdentity.getID(), id]);
+    const ventaId = uuidv5(ctx.stub.getTxID() + ctx.clientIdentity.getMSPID() + cantidad, UUID_NAMESPACE);
+    const ventaKey = ctx.stub.createCompositeKey(ventaPrefix, [ctx.clientIdentity.getID(), ventaId]);
     const venta = {
-      id,
+      id: ventaId,
       cantidad: cantidadInt,
       compradoPor: ctx.clientIdentity.getID(),
     };
+
     await ctx.stub.putState(ventaKey, Buffer.from(JSON.stringify(venta)));
     return JSON.stringify(venta);
   }
@@ -131,6 +170,7 @@ class ProductContract extends Contract {
   }
 
   async getMyVentas(ctx: Context) {
+    // venta\u0000ID_USER
     const ventaIterator = await ctx.stub.getStateByPartialCompositeKey(ventaPrefix, [ctx.clientIdentity.getID()]);
     const ventas = [];
     while (true) {
@@ -144,6 +184,35 @@ class ProductContract extends Contract {
         return JSON.stringify(ventas);
       }
     }
+  }
+
+
+  async limpiarChaincode(ctx) {
+    let iterator = await ctx.stub.getStateByPartialCompositeKey(productPrefix, []);
+
+    let result = await iterator.next();
+    while (!result.done) {
+      await ctx.stub.deleteState(result.value.key);
+      result = await iterator.next();
+    }
+
+    iterator = await ctx.stub.getStateByPartialCompositeKey(balancePrefix, []);
+
+    result = await iterator.next();
+    while (!result.done) {
+      await ctx.stub.deleteState(result.value.key);
+      result = await iterator.next();
+    }
+
+    iterator = await ctx.stub.getStateByPartialCompositeKey(ventaPrefix, []);
+
+    result = await iterator.next();
+    while (!result.done) {
+      await ctx.stub.deleteState(result.value.key);
+      result = await iterator.next();
+    }
+
+    return "OK";
   }
 }
 

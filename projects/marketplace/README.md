@@ -631,7 +631,7 @@ kubectl hlf utils adduser --userPath=peer-sony.yaml --config=marketplace.yaml --
 ```
 
 
-Añadir clientes a org1 y org2:
+Añadir clientes a marketplace y sony:
 
 ```bash
 kubectl hlf ca register --name=marketplace-ca --namespace=marketplace --user=client-marketplace --secret=clientpw --type=client \
