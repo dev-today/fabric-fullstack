@@ -151,7 +151,7 @@ class ProductContract extends Contract {
     productJson.cantidad = productJson.cantidad - cantidadInt;
     await ctx.stub.putState(productKey, Buffer.from(JSON.stringify(productJson)));
 
-    const ventaId = uuidv5(ctx.stub.getTxID() + ctx.clientIdentity.getMSPID() + cantidad, UUID_NAMESPACE);
+    const ventaId = uuidv5(ctx.stub.getTxID() + ctx.clientIdentity.getMSPID() + id + cantidad, UUID_NAMESPACE);
     const ventaKey = ctx.stub.createCompositeKey(ventaPrefix, [ctx.clientIdentity.getID(), ventaId]);
     const venta = {
       id: ventaId,

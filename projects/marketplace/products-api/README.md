@@ -105,7 +105,7 @@ http POST "http://localhost:3003/evaluate" x-user:user2 fcn=getMyBalance
 ## Comprar un producto
 
 ```bash
-http POST "http://localhost:3003/submit" x-user:user2 fcn=comprar "args[]=1" "args[]=2"
+http POST "http://localhost:3003/submit" x-user:user2 fcn=comprar "args[]=1" "args[]=1"
 ```
 
 ## Comprobar que nuestro balance ha sido actualizado

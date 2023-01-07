@@ -1,66 +1,28 @@
-import { connect, ConnectOptions, Identity, Signer, signers } from '@hyperledger/fabric-gateway';
 import "reflect-metadata";
 
-import * as grpc from '@grpc/grpc-js';
-import * as crypto from 'crypto';
+import { connect } from '@hyperledger/fabric-gateway';
+
 import { User } from 'fabric-common';
 import { promises as fs } from 'fs';
 import * as _ from "lodash";
-import { AddressInfo } from "net";
+import type { AddressInfo } from "net";
 import { Logger } from "tslog";
 import * as yaml from "yaml";
 import { checkConfig, config } from './config';
 import FabricCAServices = require("fabric-ca-client")
 import express = require("express")
+import { newGrpcConnection, newConnectOptions } from './utils';
 
 const log = new Logger({ name: "products-api" })
-
-export async function newGrpcConnection(peerEndpoint: string, tlsRootCert: Buffer): Promise<grpc.Client> {
-    const tlsCredentials = grpc.credentials.createSsl(tlsRootCert);
-    return new grpc.Client(peerEndpoint, tlsCredentials, {});
-}
-
-export async function newConnectOptions(
-    client: grpc.Client,
-    mspId: string,
-    credentials: Uint8Array,
-    privateKeyPem: string
-): Promise<ConnectOptions> {
-    return {
-        client,
-        identity: await newIdentity(mspId, credentials),
-        signer: await newSigner(privateKeyPem),
-        // Default timeouts for different gRPC calls
-        evaluateOptions: () => {
-            return { deadline: Date.now() + 5000 }; // 5 seconds
-        },
-        endorseOptions: () => {
-            return { deadline: Date.now() + 15000 }; // 15 seconds
-        },
-        submitOptions: () => {
-            return { deadline: Date.now() + 5000 }; // 5 seconds
-        },
-        commitStatusOptions: () => {
-            return { deadline: Date.now() + 60000 }; // 1 minute
-        },
-    };
-}
-
-async function newIdentity(mspId: string, credentials: Uint8Array): Promise<Identity> {
-
-    return { mspId, credentials };
-}
-
-async function newSigner(privateKeyPem: string): Promise<Signer> {
-    const privateKey = crypto.createPrivateKey(privateKeyPem);
-    return signers.newPrivateKeySigner(privateKey);
-}
 
 
 async function main() {
     checkConfig()
     const networkConfig = yaml.parse(await fs.readFile(config.networkConfigPath, 'utf8'));
     const orgPeerNames = _.get(networkConfig, `organizations.${config.mspID}.peers`)
+    if (!orgPeerNames) {
+        throw new Error(`Organization ${config.mspID} doesn't have any peers`);
+    }
     let peerUrl: string = "";
     let peerCACert: string = "";
     let idx = 0
@@ -75,6 +37,9 @@ async function main() {
             break;
         }
     }
+    if (!peerUrl || !peerCACert) {
+        throw new Error(`Organization ${config.mspID} doesn't have any peers`);
+    }
     const ca = networkConfig.certificateAuthorities[config.caName]
     if (!ca) {
         throw new Error(`Certificate authority ${config.caName} not found in network configuration`);
@@ -83,10 +48,11 @@ async function main() {
     if (!caURL) {
         throw new Error(`Certificate authority ${config.caName} does not have a URL`);
     }
+
     const fabricCAServices = new FabricCAServices(caURL, {
-        trustedRoots: [],
-        verify: false,
-    }, "ca")
+        trustedRoots: [ca.tlsCACerts.pem[0]],
+        verify: true,
+    }, ca.caName)
 
     const identityService = fabricCAServices.newIdentityService()
     const registrarUserResponse = await fabricCAServices.enroll({
@@ -106,7 +72,9 @@ async function main() {
     const adminUser = _.get(networkConfig, `organizations.${config.mspID}.users.${config.hlfUser}`)
     const userCertificate = _.get(adminUser, "cert.pem")
     const userKey = _.get(adminUser, "key.pem")
-
+    if (!userCertificate || !userKey) {
+        throw new Error(`User ${config.hlfUser} not found in network configuration`);
+    }
     const grpcConn = await newGrpcConnection(peerUrl, Buffer.from(peerCACert))
     const connectOptions = await newConnectOptions(
         grpcConn,
@@ -123,23 +91,16 @@ async function main() {
         res.header("Access-Control-Allow-Origin", "*");
         res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
         next();
-    })
-    const tokenName = "CDC"
-    const tokenSymbol = "$"
-    try {
-        const initialized = await contract.submitTransaction("Initialize", tokenName, tokenSymbol)
-        log.info("Initialized: ", initialized.toString())
-    } catch (e) {
-        log.info("Already initialized")
-    }
+    });
     app.post("/init", async (req, res) => {
         try {
+            const { tokenName, tokenSymbol } = req.query as any
             const initialized = await contract.submitTransaction("Initialize", tokenName, tokenSymbol)
             log.info("Initialized: ", initialized.toString())
+            res.send("Initialized")
         } catch (e) {
-            log.info("Already initialized")
+            res.send(e.details && e.details.length ? e.details : e.message);
         }
-        res.send("Initialized")
     })
     const users = {}
     app.post("/signup", async (req, res) => {
@@ -155,7 +116,7 @@ async function main() {
             res.send("Username already taken")
             return
         }
-        const r = await fabricCAServices.register({
+        await fabricCAServices.register({
             enrollmentID: username,
             enrollmentSecret: password,
             affiliation: "",
@@ -187,7 +148,6 @@ async function main() {
         (req as any).contract = contract
         try {
             const user = req.headers["x-user"] as string
-            console.log(users, user)
             if (user && users[user]) {
                 const connectOptions = await newConnectOptions(
                     grpcConn,
@@ -206,18 +166,26 @@ async function main() {
             next(e)
         }
     })
-
     app.get("/ping", async (req, res) => {
         try {
-            const responseBuffer = await (req as any).contract.evaluateTransaction("Ping");
+            const responseBuffer = await (req as any).contract.evaluateTransaction("ping");
             const responseString = Buffer.from(responseBuffer).toString();
             res.send(responseString);
         } catch (e) {
             res.status(400)
-            res.send(e.message);
+            res.send(e.details && e.details.length ? e.details : e.message);
         }
     })
-
+    app.get("/id", async (req, res) => {
+        try {
+            const responseBuffer = await (req as any).contract.evaluateTransaction("ClientAccountID");
+            const responseString = Buffer.from(responseBuffer).toString();
+            res.send(responseString);
+        } catch (e) {
+            res.status(400)
+            res.send(e.details && e.details.length ? e.details : e.message);
+        }
+    })
     app.post("/evaluate", async (req, res) => {
         try {
             const fcn = req.body.fcn
@@ -241,9 +209,10 @@ async function main() {
             res.send(e.details && e.details.length ? e.details : e.message);
         }
     })
+
     const server = app.listen(
         {
-            port: process.env.PORT || 3004,
+            port: process.env.PORT || 3003,
             host: process.env.HOST || "0.0.0.0",
         },
         () => {
