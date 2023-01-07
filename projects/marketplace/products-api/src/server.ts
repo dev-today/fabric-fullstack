@@ -168,7 +168,7 @@ async function main() {
     })
     app.get("/ping", async (req, res) => {
         try {
-            const responseBuffer = await (req as any).contract.evaluateTransaction("ping");
+            const responseBuffer = await (req as any).contract.evaluateTransaction("Ping");
             const responseString = Buffer.from(responseBuffer).toString();
             res.send(responseString);
         } catch (e) {
