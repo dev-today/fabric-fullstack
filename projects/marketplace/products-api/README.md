@@ -60,14 +60,14 @@ http POST "http://localhost:3004/login" username="user1" password="user1pw"
 ### Crear un Producto
 
 ```bash
-http POST "http://localhost:3004/submit" "x-user=user1" fcn=createProduct "args[]=1"  \
+http POST "http://localhost:3004/submit" x-user:user1 fcn=createProduct "args[]=1"  \
         "args[]=PS5" "args[]=Play Station 5" "args[]=699" "args[]=10"
 ```
 
 ### Obtener un Producto
 
 ```bash
-http POST "http://localhost:3004/evaluate" "x-user=user1" fcn=getProduct "args[]=1"
+http POST "http://localhost:3004/evaluate" x-user:user1 fcn=getProduct "args[]=1"
 ```
 
 ### Registrar usuario en Marketplace

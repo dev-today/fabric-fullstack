@@ -1,5 +1,3 @@
-import "reflect-metadata";
-
 import { connect } from '@hyperledger/fabric-gateway';
 
 import { User } from 'fabric-common';
@@ -9,9 +7,9 @@ import type { AddressInfo } from "net";
 import { Logger } from "tslog";
 import * as yaml from "yaml";
 import { checkConfig, config } from './config';
+import { newConnectOptions, newGrpcConnection } from './utils';
 import FabricCAServices = require("fabric-ca-client")
 import express = require("express")
-import { newGrpcConnection, newConnectOptions } from './utils';
 
 const log = new Logger({ name: "products-api" })
 
@@ -92,16 +90,6 @@ async function main() {
         res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
         next();
     });
-    app.post("/init", async (req, res) => {
-        try {
-            const { tokenName, tokenSymbol } = req.query as any
-            const initialized = await contract.submitTransaction("Initialize", tokenName, tokenSymbol)
-            log.info("Initialized: ", initialized.toString())
-            res.send("Initialized")
-        } catch (e) {
-            res.send(e.details && e.details.length ? e.details : e.message);
-        }
-    })
     const users = {}
     app.post("/signup", async (req, res) => {
         const { username, password } = req.body
@@ -147,8 +135,10 @@ async function main() {
     app.use(async (req, res, next) => {
         (req as any).contract = contract
         try {
+            log.info(Object.keys(users))
             const user = req.headers["x-user"] as string
             if (user && users[user]) {
+                log.info(`utilizando usuario ${user}`)
                 const connectOptions = await newConnectOptions(
                     grpcConn,
                     config.mspID,
@@ -176,16 +166,7 @@ async function main() {
             res.send(e.details && e.details.length ? e.details : e.message);
         }
     })
-    app.get("/id", async (req, res) => {
-        try {
-            const responseBuffer = await (req as any).contract.evaluateTransaction("ClientAccountID");
-            const responseString = Buffer.from(responseBuffer).toString();
-            res.send(responseString);
-        } catch (e) {
-            res.status(400)
-            res.send(e.details && e.details.length ? e.details : e.message);
-        }
-    })
+
     app.post("/evaluate", async (req, res) => {
         try {
             const fcn = req.body.fcn
