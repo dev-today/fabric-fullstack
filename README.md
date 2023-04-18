@@ -117,18 +117,35 @@ EOF
 
 ## Desplegar una organizacion `Peer`
 
-### Variables de entorno
+### Environment Variables for AMD (Default)
 
 ```bash
+export PEER_IMAGE=hyperledger/fabric-peer
+export PEER_VERSION=2.4.6
+
+export ORDERER_IMAGE=hyperledger/fabric-orderer
+export ORDERER_VERSION=2.4.6
+
+export CA_IMAGE=hyperledger/fabric-ca
+export CA_VERSION=1.5.6-beta2
+
+```
+### Environment Variables for ARM (Mac M1)
+
+```
 export PEER_IMAGE=bswamina/fabric-peer
 export PEER_VERSION=2.4.6
 
 export ORDERER_IMAGE=bswamina/fabric-orderer
 export ORDERER_VERSION=2.4.6
 
+export CA_IMAGE=hyperledger/fabric-ca             
+export CA_VERSION=1.5.6-beta2
 ```
 
+
 ### Configurar DNS interno
+Instalar antes jq con sudo apt install jq
 
 ```bash
 CLUSTER_IP=$(kubectl -n istio-system get svc istio-ingressgateway -o json | jq -r .spec.clusterIP)
