@@ -117,7 +117,7 @@ EOF
 
 ## Desplegar una organizacion `Peer`
 
-### Environment Variables for AMD (Default)
+### Variables de entornos para AMD (Windows, Linux, MacOS)
 
 ```bash
 export PEER_IMAGE=hyperledger/fabric-peer
@@ -130,7 +130,7 @@ export CA_IMAGE=hyperledger/fabric-ca
 export CA_VERSION=1.5.6-beta2
 
 ```
-### Environment Variables for ARM (Mac M1)
+### Variables de entorno para ARM (Mac M1)
 
 ```
 export PEER_IMAGE=bswamina/fabric-peer
